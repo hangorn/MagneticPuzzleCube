@@ -39,6 +39,10 @@
 			var group;
 			//Tiempo en el que se inicia el puzzle
 			var startTime=false;
+			//Booleano para indicar si el puzzle ha sido resuelto
+			var isDone = false;
+			//Tamaño de la zona de soluciones
+			var solSize = 1100;
 			
 			//Raton
 			//Ultima posicion del raton
@@ -59,6 +63,10 @@
 			var SELECTED;
 			//Proyector
 			var projector;
+			
+			//Tamaño de la ventana
+			var windowHeight;
+			var windowWidth;
 			
 			//Iniciamos y lanzamos la aplicacion
 			init();
@@ -149,7 +157,7 @@
 				//Colocamos la figura en la posicion inicial y guardamos dicha posicion
 				cube.position = pos;
 				cube.posIni = new THREE.Vector3(cube.position.x, cube.position.y, cube.position.z);
-				cube.rotation = new THREE.Vector3(roundAngle(Math.random()*360), roundAngle(Math.random()*360), roundAngle(Math.random()*360));
+				cube.rotation = new THREE.Vector3(roundAngle(Math.random()*Math.PI*2), roundAngle(Math.random()*Math.PI*2), roundAngle(Math.random()*Math.PI*2));
 				
 				//Guardamos en un array la informacion de cada cara: imagen, seccion de la imagen y angulo de rotacion
 				cube.facesInf = [];
@@ -1123,6 +1131,7 @@
 						group.rotation.x = group.rotation.y = group.rotation.z = 0;
 						plane.position.z = 0;
 						startTime = Date.now();
+						isDone = false;
 					}
 				}
 				
@@ -1216,10 +1225,14 @@
 				//Si esta seleccionado algun objeto y esta pulsado el boton izquierdo
 				if(leftDown && SELECTED)
 				{
-					if(SELECTED != group && SELECTED != solutionCubes[0] && SELECTED != solutionCubes[1] && SELECTED != solutionCubes[2])
+					//Si el objeto seleccionado no es el grupo ni ninguna de las soluciones, ni esta solucionado el puzzle, entonces movemos el objeto
+					if(SELECTED != group && SELECTED != solutionCubes[0] && SELECTED != solutionCubes[1] && SELECTED != solutionCubes[2] && !isDone)
 					{	
-						//Movemos la figura seleccionada
-						SELECTED.position.copy(intersects[0].point);
+						
+						//Si el raton se encuentra en la zona de movimiento
+						if(intersects[0].point.x <= solSize && event.clientX >= 0 && event.clientX <= windowWidth && event.clientY >= 0 && event.clientY <= windowHeight)
+							//Movemos la figura seleccionada
+							SELECTED.position.copy(intersects[0].point);
 					
 						//Comprobamos si esta en la zona del puzzle
 						if(isPuzzleZone(SELECTED.position))
@@ -1249,9 +1262,10 @@
 								//Movemos tanto la figura como el plano de desplazamiento a Z=0
 								SELECTED.position.z = plane.position.z = 0;
 							
-						//Y salimos del evento
-						return;
 					}
+					
+					//Y salimos del evento
+					return;
 				}
 				
 				//Si llegamos hasta aqui es que no esta seleccionado ningun objeto
@@ -1313,7 +1327,8 @@
 							//Y añadimos la figura al puzzle
 							group.add(SELECTED);
 							
-							if(group.children.length == 27)
+							//Si se han introducido todas las piezas en el puzzle y no se habia resuelto
+							if(group.children.length == 27 && !isDone)
 							{
 								//Tiempo transcurrido en segundos
 								var time = (Date.now() - startTime)/1000;
@@ -1323,6 +1338,7 @@
 									var minutes = Math.floor(time/60);
 									//Segundos, solo con tres decimales
 									var seconds = Math.round((time % 60)*1000)/1000;
+									isDone = true;
 									alert("Puzzle solucionado !!!\nen "+minutes+" minutos y "+seconds);
 								}
 								else
