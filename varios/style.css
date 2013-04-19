@@ -1,0 +1,24 @@
+.todo
+{
+    background-color: #dddddd;
+    margin: 10%;
+    padding: 10px 20%;
+    width: 40%;
+    height: 300px;
+    border-radius: 30px;
+    text-align: center;
+}
+
+fieldset
+{
+    border-radius: 10px;
+    border-collapse: collapse;
+    display:inline;
+}
+
+input.boton
+{
+    position: relative;
+    bottom: -35%;
+    right: 50%;
+}

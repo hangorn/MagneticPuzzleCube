@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Page Title</title>
+    <meta charset="utf-8">
+</head>
+
+<body>
+
+        <script type="text/javascript">  
+    /** 
+     * @src { String } Representa la url fuente de la imagen 
+     * @callback { Function } Es llamada al cargar la imagen completamente. 
+     */  
+    function preLoad(src, callback) {  
+      var img = new Image();  
+      img.src = src;  
+      callback && (img.onload = callback);  
+    }  
+      
+    /** 
+     * @images { Array } arreglo con las urls de las imágenes que se cargaran 
+     * @callback { Function } Es llamada al cargar TODAS las imágenes. 
+     * @iterator { Function } Es llamado por cada imagen que va cargando. 
+     *                        recibe (@index, @src) 
+     */  
+    function preLoadSeveral(images, callback, iterator) {  
+      var counter = 0;  
+      for ( var i = 0; i < images.length ; i++) {  
+        preLoad(images[i], function(){  
+          counter+=1;  
+          // i+0 es para sacar una copia de "i"  
+          iterator && iterator(i+0, images[i]);  
+          if (counter === images.length){  
+             callback && callback();  
+          }  
+        });  
+      }  
+    }  
+      
+    /* Arreglo de url de imágenes a precargar */  
+      
+    var images  = [  
+      'img/img1.gif',  
+      'img/img1.gif',  
+      'img/img1.gif',  
+      'img/img1.gif'  
+    ];  
+      
+    /* Llamamos a la funcion */  
+    preLoadSeveral(images, function(){  
+      alert("Listo!, Se cargó todo el arreglo de imagenes!");  
+    }, function(i,p){  
+      alert("Se cargo la imagen #N: " +  i);  
+    });  
+      
+    /* Lo que se mostrara */  
+      
+    // Se cargo la imagen #N: 1  
+    // Se cargo la imagen #N: 2  
+    // Se cargo la imagen #N: 3  
+    // Se cargo la imagen #N: 4  
+    // Listo!, Se cargó todo el arreglo de imagenes!  
+    </script>  
+
+</body>
+</html>
