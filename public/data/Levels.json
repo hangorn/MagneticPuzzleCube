@@ -1,0 +1,22 @@
+{
+"data":
+[
+    {"name" : "Empezando con 2 soluciones",       "img" : "img/levels/level1.gif",   "description" : "Puzzle de 8 cubos. Con lo cual existen dos posibles soluciones con 6 imagenes cada una y 12 imagenes en total."},
+    {"name" : "Empezando con 3 soluciones",       "img" : "img/levels/level2.gif",   "description" : "Puzzle de 27 cubos. Con lo cual existen tres posibles soluciones con 6 imagenes cada una y 18 imagenes en total."},
+    {"name" : "2 imagenes repetidas",       "img" : "img/levels/level3.gif",   "description" : "Puzzle de 8 cubos, con cada imagen repetida dos veces, asi que solo habra 6 imagenes distintas."},
+    {"name" : "2 imagenes repetidas",       "img" : "img/levels/level4.gif",   "description" : "Puzzle de 27 cubos, con cada imagen repetida dos veces, asi que solo habra 9 imagenes distintas."},
+    {"name" : "Colores",       "img" : "img/levels/level5.gif",   "description" : "Puzzle de 8 cubos de colores en lugar de imagenes."},
+    {"name" : "Colores",       "img" : "img/levels/level6.gif",   "description" : "Puzzle de 27 cubos de colores en lugar de imagenes."},
+    {"name" : "3 imagenes repetidas",       "img" : "img/levels/level7.gif",   "description" : "Puzzle de 8 cubos, con cada imagen repetida tres veces, asi que solo habra 4 imagenes distintas."},
+    {"name" : "3 imagenes repetidas",       "img" : "img/levels/level8.gif",   "description" : "Puzzle de 27 cubos, con cada imagen repetida tres veces, asi que solo habra 6 imagenes distintas."},
+    {"name" : "Sobran cubos",       "img" : "img/levels/level9.gif",   "description" : "Puzzle de 8 cubos con algunos cubos mas que no pertenecen a ninguna solucion."},
+    {"name" : "Sobran cubos",       "img" : "img/levels/level10.gif",   "description" : "Puzzle de 27 cubos con algunos cubos mas que no pertenecen a ninguna solucion."},
+    {"name" : "6 imagenes repetidas",       "img" : "img/levels/level7.gif",   "description" : "Puzzle de 8 cubos, con cada imagen repetida seis veces, asi que solo habra 2 imagenes distintas."},
+    {"name" : "6 imagenes repetidas",       "img" : "img/levels/level8.gif",   "description" : "Puzzle de 27 cubos, con cada imagen repetida seis veces, asi que solo habra 3 imagenes distintas."},
+    {"name" : "En movimiento",       "img" : "img/levels/level13.gif",   "description" : "Puzzle de 8 cubos donde las piezas que no esten encajadas en el puzzle permaneceran en movimiento."},
+    {"name" : "En movimiento",       "img" : "img/levels/level14.gif",   "description" : "Puzzle de 27 cubos donde las piezas que no esten encajadas en el puzzle permaneceran en movimiento."},
+    {"name" : "12 imagenes repetidas",       "img" : "img/levels/level7.gif",   "description" : "Puzzle de 27 cubos, con todas las imagenes repetidas, asi que solo habra una imagen."},
+    {"name" : "18 imagenes repetidas",       "img" : "img/levels/level8.gif",   "description" : "Puzzle de 27 cubos, con todas las imagenes repetidas, asi que solo habra una imagen."}
+]
+    
+}
