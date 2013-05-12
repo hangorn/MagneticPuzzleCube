@@ -10,5 +10,6 @@ Using
 
 When you have installed node.js, you can run the game like that:
 
-```node index.js
+```
+node index.js
 ```
