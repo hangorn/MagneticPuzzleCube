@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>soluciones</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimun-scale=1.0, maximun-scale=1.0">
+    <style>
+            body {
+                    background-color: #f0f0f0;
+                    margin: 0px;
+                    overflow: hidden;
+            }
+            canvas {
+                    width: 100%;
+            }
+    </style>
+        
+    <script src="js/three.min.js"></script>
+    
+    <script src="SolutionsView.js"></script>
+    <script src="SolutionsController.js"></script>
+    
+    
+    <script src="Utils.js"></script>
+    
+</head>
+
+<body>
+    <script>
+        //Obtenemos los datos de la ventana que abrio esta
+        var mats = window.opener.mats;
+        var materials = [];
+        for(var i=0; i<mats.length; i++)
+        {
+            if(mats[i].map != null)
+            {
+                var texture = new THREE.Texture(mats[i].map.image);
+                texture.needsUpdate = true;
+                materials.push( new THREE.MeshBasicMaterial( { map: texture} ) );
+            }
+            else
+            {
+                var col = mats[i].color.getHex();
+                materials.push( new THREE.MeshBasicMaterial( { color: col} ) );
+            }
+        }
+        var numC = window.opener.numC;
+        
+        //Creamos y añadimos un contenedor para el render
+        var container = document.createElement('div');
+        document.body.appendChild(container);
+        //Creamos una escena
+        scene = new THREE.Scene();        
+        //Creamos una camara, la movemos hacia atras
+        camera = new THREE.PerspectiveCamera(30, window.innerWidth/window.innerHeight, 1, 5000);
+        camera.position.z = 3000;
+        
+        //Creamos el render y fijamos su tamaño
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        windowHeight = window.innerHeight;
+        windowWidth = window.innerWidth;
+        
+        //Introduciomos el render en el contenedor
+        renderer.domElement.id = "solutionsCanvas";
+        container.appendChild(renderer.domElement);        
+        
+        sv = new SolutionsView(camera, scene, numC, materials, window.opener.sensitivity);
+        
+        animate();
+        
+        function animate()
+        {
+            //Hacemos una peticion para animacion
+            requestAnimationFrame(animate);
+            
+            //Renderizamos la escena
+            render();
+        }
+        
+        function render()
+        {
+            //Renderizamos la escena
+            renderer.render(scene, camera);
+        }
+        
+    </script>
+</body>
+</html>

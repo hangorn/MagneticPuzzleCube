@@ -1,0 +1,1507 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>Magnetic Puzzle Cube Prototipo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimun-scale=1.0, maximun-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			canvas {
+				width: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		
+		<script src="./js/Stats.js"></script>
+		<script src="./aux.js"></script>
+		
+		<script src="js/three.min.js"></script>
+		<script src="js/shaders/ConvolutionShader.js"></script>
+		<script src="js/shaders/CopyShader.js"></script>
+		<script src="js/shaders/FilmShader.js"></script>
+		<script src="js/shaders/FXAAShader.js"></script>
+		<script src="js/postprocessing/EffectComposer.js"></script>
+		<script src="js/postprocessing/RenderPass.js"></script>
+		<script src="js/postprocessing/ShaderPass.js"></script>
+		<script src="js/postprocessing/MaskPass.js"></script>
+		<script src="js/postprocessing/BloomPass.js"></script>
+		<script src="js/postprocessing/FilmPass.js"></script>
+		
+		
+		
+		<script src="./Puzzle.js"></script>
+		<script src="./Cube.js"></script>
+		<script src="./Face.js"></script>
+		<script src="./PuzzleController.js"></script>
+		
+		<script src="./LibraryView.js"></script>
+		
+		
+		<script>
+			var container, stats, permalink, hex, color;
+
+			var camera, cameraTarget, scene, renderer;
+
+			var composer;
+			var effectFXAA;
+
+			var textMesh1, textMesh2, textGeo, material, parent;
+
+			var firstLetter = true;
+
+			var text = "three.js",
+
+				height = 20,
+				size = 70,
+				hover = 30,
+
+				curveSegments = 4,
+
+				bevelThickness = 2,
+				bevelSize = 1.5,
+				bevelSegments = 3,
+				bevelEnabled = true,
+
+				font = "optimer", // helvetiker, optimer, gentilis, droid sans, droid serif
+				weight = "bold", // normal bold
+				style = "normal"; // normal italic
+
+			var mirror = true;
+
+			var fontMap = {
+
+				"helvetiker": 0,
+				"optimer": 1,
+				"gentilis": 2,
+				"droid sans": 3,
+				"droid serif": 4
+
+			};
+
+			var weightMap = {
+
+				"normal": 0,
+				"bold": 1
+
+			};
+
+			var reverseFontMap = {};
+			var reverseWeightMap = {};
+
+			for ( var i in fontMap ) reverseFontMap[ fontMap[i] ] = i;
+			for ( var i in weightMap ) reverseWeightMap[ weightMap[i] ] = i;
+
+			var targetRotation = 0;
+			var targetRotationOnMouseDown = 0;
+
+			var mouseX = 0;
+			var mouseXOnMouseDown = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			var postprocessing = { enabled : false };
+			var glow = 0.9;
+			
+			//Elementos html
+			var container, stats;
+			
+			//Objetos del engine
+			var camera, scene, renderer;
+			
+			//Array con los materiales de cada imagen
+			var IMAGES = [];
+			
+			//Figuras
+			var solutionCubes = [];
+			//Array con todas las figuras que saldran en la escena
+			var objects = [];
+			//Array con los cubos
+			var cubes = [];
+			
+			//Puzzle
+			var puzzle;
+			//Tiempo en el que se inicia el puzzle
+			var startTime=false;
+			//Booleano para indicar si el puzzle ha sido resuelto
+			var isDone = false;
+			//Tamaño de la zona de soluciones
+			var solSize = 1100;
+			
+			//Tamaño de la ventana
+			var windowHeight;
+			var windowWidth;
+			
+			//Iniciamos y lanzamos la aplicacion
+			init();
+			animate();
+			
+			
+			//deeeeeebuuug
+			function recargar()
+			{
+				var a = new LibraryView(scene, IMAGES);
+			}
+			
+{
+/************************************************/
+/*		Funciones del puzzle					*/	
+/************************************************/
+			
+			//Funcion para crear un cubo. parametros:
+			// -imgs : array con los indices de los 6 materiales
+			// -sectionImgs : array con 6 Vector3 de THREE.js, en X e Y		0,0  1,0  2,0
+			// guardamos la seccion (0,0 para la seccion arriba a la		0,1  1,1  2,1
+			// izquierda, 2,2 para la seccion de abajo a la derecha) y 		0,2  1,2  2,2
+			// en Z la rotacion de la imagen en grados
+			// -pos : posicion inicial en el mundo del cubo
+			
+			//Orden del array:
+			//1 -> derecha
+			//2 -> izquierda
+			//3 -> arriba
+			//4 -> abajo
+			//5 -> delante
+			//6 -> detras
+			
+			//Orden vertices de una cara:
+			//arriba izquierda			o	 o
+			//abajo izquierda			|	 A
+			//abajo derecha				V	 |
+			//arriba derecha			o--->o
+			/*
+			function createCube(imgs, sectionImgs, pos)
+			{
+				//Si no hay exactamente seis imagenes o seis vectores de posicion devolvemos null
+				if(imgs.length != 6 || sectionImgs.length != 6)
+					return null;
+				
+				var unTercio = 1/3;
+				//Primero creamos un array con los materiales a usar, los cuales ya has sido creados
+				var materials = []
+				for(var i=0; i<6; i++)
+					materials.push( IMAGES[imgs[i]]);
+				
+				//Creamos la geometria del cubo
+				var geometry;
+				geometry = 	new THREE.CubeGeometry(200,200,200, 1,1,1, materials);
+				//Recorremos cada cara para seleccionar la seccion proporcionada
+				for(var i=0; i<6; i++)
+				{
+					var faceUV = geometry.faceVertexUvs[0][i];
+					//Obtenemos el angulo que esta girada la seccion, si es mayor que 360º obtenemos su equivalente
+					var angle = sectionImgs[i].z - 360*Math.floor(sectionImgs[i].z / 360);
+					//Calculamos las coordenadas de los cuatro vertices de la textura de la seccion, teniendo en
+					//cuenta que 0,0 es la esquina superior izquierda de la imagen y 1,1 la esquina inferior derecha
+					var coords = [];
+					coords.push(new THREE.UV(unTercio*sectionImgs[i].x, unTercio*sectionImgs[i].y));
+					coords.push(new THREE.UV(unTercio*sectionImgs[i].x, unTercio*sectionImgs[i].y+unTercio));
+					coords.push(new THREE.UV(unTercio*sectionImgs[i].x+unTercio, unTercio*sectionImgs[i].y+unTercio));
+					coords.push(new THREE.UV(unTercio*sectionImgs[i].x+unTercio, unTercio*sectionImgs[i].y));
+					
+					//Obtenemos el numero de veces que hay que girar 90º hacia la izquierda (antihorario) la seccion
+					var angle = Math.round(angle/90);
+					if(angle == 4) angle = 0;
+					//Calculamos las coordenadas de los vertices de la textura teniendo en cuenta el giro, el cual hara
+					//que se muevan una posicion hacia atras por cada 90 º las coordenadas anteriormente calculadas
+					for(var j=0; j<4; j++)
+					{
+						//Calculamos el desplazamiento de las coordenadas en los vertices debido al angulo
+						var ind = j - angle;
+						//Si el indice es negativo se reinicia la cuanta al final
+						if(ind < 0)
+							ind = j - angle + 4;
+						//Guardamos las coordenadas del vertice correspondiente
+						faceUV[j] = coords[ind];
+					}					
+				}
+				
+				//Creamos la figura
+				var cube;
+				cube = new THREE.Mesh(geometry, new THREE.MeshFaceMaterial() );
+				//Colocamos la figura en la posicion inicial y guardamos dicha posicion
+				cube.position = pos;
+				cube.posIni = new THREE.Vector3(cube.position.x, cube.position.y, cube.position.z);
+				cube.rotation = new THREE.Vector3(roundAngle(Math.random()*Math.PI*2), roundAngle(Math.random()*Math.PI*2), roundAngle(Math.random()*Math.PI*2));
+				
+				//Guardamos en un array la informacion de cada cara: imagen, seccion de la imagen y angulo de rotacion
+				cube.facesInf = [];
+				for(var i=0; i<6; i++)
+				{
+					//Primero la imagen, luego las coordenadas de la seccion, y finalmente el angulo
+					cube.facesInf.push(new THREE.Vector4(imgs[i], sectionImgs[i].x, sectionImgs[i].y, sectionImgs[i].z - 360*Math.floor(sectionImgs[i].z / 360)));
+				}
+				
+				return cube;
+			}
+			
+			
+			//Funcion para saber si una posicion esta en la zona del puzzle
+			function isPuzzleZone(position)
+			{
+				if(position.x < -500 || position.x > 500 || position.y < -500 || position.y > 500)
+					return false;
+				else
+					return true;				
+			}
+			
+			//Funcion para saber las coordenadas locales al puzzle (group) que estan mas cerca de donde se ha soltado la figura
+			function positionPuzzle(object)
+			{
+				//Si no hay ninguna figura en el puzzle, se coloca en el centro
+				if(group.children.length == 0)
+					return new THREE.Vector3(0,0,0);
+				
+				//Calculamos las posibles posiciones, adyacentes a las figuras ya colocadas
+				//Vamos a crear un array ordenado por 'x' luego 'y' y luego 'z' con todas las posibles posiciones
+				//Al ordenarlo sera mas facil hacer una busqueda y evitar las repeticiones
+				var possiblePositions = [];
+				var posPos=[];
+				for(var i=0; i<group.children.length; i++)
+				{
+					for(var k=0; k<6; k++)
+					{
+						//Calculamos las seis posibles posiciones: izquierda, derecha, abajo, arriba, detras, delante
+						var pos = new THREE.Vector3(group.children[i].position.x, group.children[i].position.y, group.children[i].position.z);
+						pos.x += (-200 + Math.floor(k%2)*400)*((k==0||k==1)?1:0);
+						pos.y += (-200 + Math.floor(k%2)*400)*((k==2||k==3)?1:0);
+						pos.z += (-200 + Math.floor(k%2)*400)*((k==4||k==5)?1:0);
+						
+						//Recorremos la lista de posibles posiciones para introducirlo en orden si no esta ya
+						for(var j=0; j<possiblePositions.length; j++)
+						{
+							//Comparamos la poscion con la posible posicion que se esta recorriendo
+							comp = compareVector3(pos, possiblePositions[j]);
+							//Si la posicion ya esta no seguimos buscando
+							if(comp == 0)
+							{
+								j=-1;
+								break;
+							}
+							//Si encontramos un elemento mas grande salimos para insertarlo antes
+							if(comp == -1)
+								break;
+						}
+						//Si no esta repetido lo introducimos en las posibles posiciones
+						if(j!=-1)
+							possiblePositions.splice(j,0,pos);
+					}
+				}
+				
+				//Eliminamos de las posibles posiciones aquellas donde ya se encuentre una figura
+				for(var i=0; i<group.children.length; i++)
+				{
+					//Busqueda binaria de la posicion
+					var min=0, max=possiblePositions.length-1;
+					var buscar = group.children[i].position;
+					
+					//Comprobamos que el elemento a buscar esta entre los valores minimo y maximo del vector				
+					if(compareVector3(buscar, possiblePositions[min]) == -1 || compareVector3(buscar, possiblePositions[max]) == 1)
+						//El elemento a buscar no esta contenido en el vector, seguimos con la siguiente figura
+						continue;
+					
+					var j
+					while(min <= max)
+					{
+						j = Math.floor( (min+max) / 2);
+						
+						var comp = compareVector3(buscar, possiblePositions[j]);
+						//Elemento anterior al indice
+						if(comp == -1)
+							max=j-1;
+						//Elemento posterior al indice
+						if(comp == 1)
+							min=j+1;
+						//Coord X, Y, Z iguales => elemento encontrado 
+						if(comp == 0)
+						{
+							possiblePositions.splice(j,1);
+							break;
+						}
+					}
+				}
+				
+				//Buscamos la posicion mas cercana a donde se ha soltado la figura
+				var min, j=0;
+				for(var i=0; i<possiblePositions.length; i++)
+				{
+					//Calculamos la posicion en el mundo de la posible posicion en el puzzle
+					var posWorld = worldCoordFromPuzzlePosition(possiblePositions[i]);
+					//Calculamos la distancia entre la posible posicion y el objeto
+					var dist = posWorld.distanceTo(object.position);
+					if(i==0)
+						min = dist;
+					else if(dist < min)
+					{
+						min = dist;
+						j=i;
+					}
+				}
+				
+				return possiblePositions[j];
+			}
+			
+			
+			//Funcion para saber la rotacion local al puzzle (group) mas cercana a un angulo de 90º de la figura que se ha soltado
+			function rotationPuzzle(object)
+			{
+				//Creamos un vector para almacenar la rotacion
+				var rot = new THREE.Vector3();
+				//Creamos una matriz temporal para hacer transformaciones
+				var temp = new THREE.Matrix4();
+				//Creamos una matriz para guardar la inversa del puzzle
+				var inv = new THREE.Matrix4();
+				
+				//Introducimos la rotacion de la figura en el mundo
+				temp.setRotationFromEuler(object.rotation);
+				//Obtenemos la matriz inversa a la del puzzle
+				group.updateMatrix();
+				inv.getInverse(group.matrix);
+				//La transformamos segun la rotacion del puzzle
+				temp.multiply(inv, temp);
+				//Extraemos la rotacion de la matriz y la guardamos en el vector
+				rot.getRotationFromMatrix(temp);
+				
+				//Redondeamos
+				rot.x = roundAngle(rot.x);
+				rot.y = roundAngle(rot.y);
+				rot.z = roundAngle(rot.z);
+				
+				return rot;
+			}
+			
+			//Funcion para calcular la rotacion en el mundo de un objeto en el puzzle
+			function worldRotationFromPuzzleRotation(puzzleRot)
+			{
+				//Creamos un vector para almacenar la rotacion
+				var rot = new THREE.Vector3();
+				//Creamos una matriz temporal para hacer transformaciones
+				var temp = new THREE.Matrix4();
+				
+				//Introducimos la rotacion de la figura en el puzzle
+				temp.setRotationFromEuler(puzzleRot);
+				//La transformamos segun la rotacion del puzzle
+				group.updateMatrix();
+				temp.multiply(group.matrix, temp);
+				//Extraemos la rotacion de la matriz y la guardamos en el vector
+				rot.getRotationFromMatrix(temp);
+				
+				return rot;
+			}
+			
+			//Funcion para calcular las coordenadas en el mundo de un objeto en el puzzle
+			function worldCoordFromPuzzlePosition(puzzleCoord)
+			{
+				//Guardamos una copia para no modificar las originales
+				var coords = new THREE.Vector3(puzzleCoord.x, puzzleCoord.y, puzzleCoord.z);
+				//Aplicamos la matriz de transformacion del puzzle
+				group.updateMatrix();
+				group.matrix.multiplyVector3(coords);
+				//Devolvemos el valor de las nuevas coordenadas
+				return coords;
+			}
+			
+			//Funcion para saber si una posicion es adyacente a otra en una
+			//distancia determinada
+			function isNext(pos1, pos2, dist)
+			{
+				//Comprobamos que en los tres ejes la distancia entre los dos
+				//puntos es menor o igual que la distancia proporcionada
+				if(Math.abs(pos1.x - pos2.x) <= dist && Math.abs(pos1.y - pos2.y) <= dist && Math.abs(pos1.z - pos2.z) <= dist)
+					return true;
+				else
+					return false;
+			}
+			
+			//Funcion para saber el centro del cubo formado en el puzzle
+			//Devuelve el objeto cubo si esta formado un cubo y existe, y null
+			//en caso contrario
+			function getCenterCube()
+			{
+				//Distancia entre una figura y su posicion mas alejada en un
+				//determinado eje, al ser un cubo la distancia es igual en los
+				//tres ejes
+				var dist=400;
+				//Comprobamos que estan todas las figuras en el puzzle
+				if(group.children.length != 27)
+					return null;
+					
+				//Recorremos todas las figuras del puzzle
+				for(var i=0; i<group.children.length; i++)
+				{
+					//Booleano para saber si la figura es el centro
+					var isCenter = true;
+					
+					//Comparamos cada figura con el resto para saber si estan a
+					//demasiada distancia para formar un cubo y para saber si
+					//son el centro de dicho cubo
+					for(var j=0; j<group.children.length; j++)
+					{
+						//Si la figura con la que vamos a comparar es ella misma
+						//nos la saltamos, no comparamos una figura con si misma
+						if(j==i)
+						{
+							j++;
+							//Si saltamos a una posicion que no esta en el array
+							if(!(j<group.children.length))
+								//Paramos, hemos llegado al final
+								break;						
+						}
+						//Comprobamos que la distancia entre las dos figuras no
+						//sea mayor que la que hay entre las dos piezas mas
+						//distantes: es decir mayor que el tamaño del puzzle
+						if(Math.abs(group.children[i].position.x - group.children[j].position.x) > dist || Math.abs(group.children[i].position.y - group.children[j].position.y) > dist || Math.abs(group.children[i].position.z - group.children[j].position.z) > dist)
+							return null;
+						//Comprobamos si las figuras son adyacentes
+						if(isNext(group.children[i].position, group.children[j].position, 200))
+						{
+							isCenter = true;
+						}
+						else
+						{
+							//Las figuras no pueden ser adyacentes, dejamos de comparar
+							isCenter = false;
+							break;
+						}
+					}
+					
+					//Si despues de comparar con el resto de figuras se obtiene
+					//que es el centro
+					if(isCenter)
+						//Se devueve la figura y se deja de buscar
+						return group.children[i];
+				}
+				
+				//Si se llega aqui es que no se ha encontrado nigun cubo que sea
+				//el centro, con lo cual no estan formando un cubo
+				return null;
+			}
+			
+			//Funcion para obtener el objeto del cubo que se encuentra en la
+			//posicion suministrada
+			function getCube(pos)
+			{
+				for(var i=0; i<group.children.length; i++)
+				{
+					if(group.children[i].position.x == pos.x && group.children[i].position.y == pos.y && group.children[i].position.z == pos.z)
+						return group.children[i];
+				}
+				return null;
+			}
+			
+			//Funcion que devuelve los cubos que forman una cara del puzzle
+			//cuando este es un cubo
+			function getFaceCubes(face, centerCube)
+			{
+				var cubes = [];
+				
+				switch(face)
+				{
+					//Cara derecha
+					case 1:
+						//Recorremos con dos bucles las posiciones de las cubos
+						//guardandolos en el array
+						for(var i=1; i>-2; i--)
+							for(var j=1; j>-2; j--)
+								cubes.push(getCube(new THREE.Vector3(200+centerCube.position.x,200*i+centerCube.position.y,200*j+centerCube.position.z)));
+						break;
+					//Cara izquierda
+					case 2:
+						//Recorremos con dos bucles las posiciones de las cubos
+						//guardandolos en el array
+						for(var i=1; i>-2; i--)
+							for(var j=-1; j<2; j++)
+								cubes.push(getCube(new THREE.Vector3(-200+centerCube.position.x,200*i+centerCube.position.y,200*j+centerCube.position.z)));
+						break;
+					//Cara superior
+					case 3:
+						//Recorremos con dos bucles las posiciones de las cubos
+						//guardandolos en el array
+						for(var i=-1; i<2; i++)
+							for(var j=-1; j<2; j++)
+								cubes.push(getCube(new THREE.Vector3(200*j+centerCube.position.x,200+centerCube.position.y,200*i+centerCube.position.z)));
+						break;
+					//Cara inferior
+					case 4:
+						//Recorremos con dos bucles las posiciones de las cubos
+						//guardandolos en el array
+						for(var i=1; i>-2; i--)
+							for(var j=-1; j<2; j++)
+								cubes.push(getCube(new THREE.Vector3(200*j+centerCube.position.x,-200+centerCube.position.y,200*i+centerCube.position.z)));
+						break;
+					//Cara delantera
+					case 5:
+						//Recorremos con dos bucles las posiciones de las cubos
+						//guardandolos en el array
+						for(var i=-1; i<2; i++)
+							for(var j=1; j>-2; j--)
+								cubes.push(getCube(new THREE.Vector3(200*j+centerCube.position.x,200*i+centerCube.position.y,200+centerCube.position.z)));
+						break;
+					//Cara trasera
+					case 6:
+						//Recorremos con dos bucles las posiciones de las cubos
+						//guardandolos en el array
+						for(var i=-1; i<2; i++)
+							for(var j=-1; j<2; j++)
+								cubes.push(getCube(new THREE.Vector3(200*j+centerCube.position.x,200*i+centerCube.position.y,-200+centerCube.position.z)));
+						break;
+					default :
+						return null;
+				}
+				return cubes;
+			}
+			
+			//funcion que devuelve el numero de cara de un cubo que se encuentra
+			//en una cara del puzzle
+			function getFace(cube, puzzleFace)
+			{
+				//Obtenemos la matriz de rotacion del cubo
+				var mat = new THREE.Matrix4();
+				cube.updateMatrix();
+				mat.extractRotation(cube.matrix);
+				
+				//Obtenemos las coordenadas de la cara que estamos buscando y aprovechamos que el cubo ya las tiene creadas para extraerselas
+				var faceCoords = [];
+				faceCoords.push(cube.geometry.vertices[cube.geometry.faces[puzzleFace-1].a]);
+				faceCoords.push(cube.geometry.vertices[cube.geometry.faces[puzzleFace-1].b]);
+				faceCoords.push(cube.geometry.vertices[cube.geometry.faces[puzzleFace-1].c]);
+				faceCoords.push(cube.geometry.vertices[cube.geometry.faces[puzzleFace-1].d]);
+				
+				//Recorremos las caras del cubo
+				var indexes = [];
+				var rot;
+				for(var i=0; i<cube.geometry.faces.length; i++)
+				{
+					//Guardamos los indices de la cara para poder recorrerlos
+					var faceIndex = [cube.geometry.faces[i].a, cube.geometry.faces[i].b, cube.geometry.faces[i].c, cube.geometry.faces[i].d]
+					
+					//Recorremos los vertices de la cara	
+					for(k=0; k<4; k++)	
+					{
+						//Guardamos en un vector temporal el vertice
+						var temp = new THREE.Vector3(cube.geometry.vertices[faceIndex[k]].x, cube.geometry.vertices[faceIndex[k]].y, cube.geometry.vertices[faceIndex[k]].z);
+						//Le aplicamos la matriz de rotacion del cubo
+						mat.multiplyVector3(temp);
+						//Aproximamos el vertice, ya que al aplicar la matriz se puede producir un pequeño desajuste,
+						//del orden de 10^-14 y solo con esto las comparaciones ya no serian posibles
+						temp.x = Math.round(temp.x);
+						temp.y = Math.round(temp.y);
+						temp.z = Math.round(temp.z);
+						//Buscamos si el vertice pertenece a la cara buscada
+						for(var j=0; j<4; j++)
+						{
+							//En caso de encontrarlo
+							if(temp.x == faceCoords[j].x && temp.y == faceCoords[j].y && temp.z == faceCoords[j].z)
+							{
+								//Guardamos el indice
+								indexes.push(faceIndex[k]);
+								//Si es el primer vertice guardamos el desplazamiento que hay en posiciones respecto a la cara buscada
+								//Asi podremos obtener la rotacion que tiene la cara
+								if(k==0)
+									rot=j;
+								break;
+							}
+						}
+					}
+					
+					//Si se han encontrado los cuatro vertices de la cara
+					if(indexes.length == 4)
+						//Dejamos de buscar, hemos encontrado la cara
+						break;
+					else
+						//Vaciamos el array de los indices, no es la cara, y seguimos buscando
+						indexes = [];
+				}
+				
+				//Obtenemos el angulo de rotacion
+				rot*=90;
+				
+				//Obtenemos el numero de la cara teniendo en cuenta estas equivalencias con los indices:
+				//				caras	  indices
+				//cara derecha -> 	1  :  0 2 3 1
+				//cara izquierda -> 2  :  4 6 7 5
+				//cara arriba -> 	3  :  4 5 0 1
+				//cara abajo -> 	4  :  7 6 3 2
+				//cara delante -> 	5  :  5 7 2 0
+				//cara detras -> 	6  :  1 3 6 4
+				var face;
+				if(indexes[0] == 0)
+					face = 1;
+				else if(indexes[0] == 4)
+				{
+					if(indexes[1] == 6)
+						face = 2;
+					else if(indexes[1] == 5)
+						face = 3;
+					else
+						//En teoria a este punto no podria llegar nunca
+						return null;
+				}
+				else if(indexes[0] == 1)
+					face = 6;
+				else if(indexes[0] == 5)
+					face = 5;
+				else if(indexes[0] == 7)
+					face = 4;
+				else
+					//En teoria a este punto no podria llegar nunca
+					return null;
+				
+				//Devolvemos un vector de dos componentes donde el primero es la cara y el segundo la rotacion de esta
+				return new THREE.Vector2(face, rot);
+			}
+			
+			//Funcion que devuelve un booleano en funcion de si el puzzle esta
+			//resuelto o no
+			function isSolved()
+			{
+				//Obtenemos el centro del cubo si existe
+				var center = getCenterCube();
+				//Si no existe devolvemos falso, ya que no esta resuelto, no forma un cubo
+				if(!center)
+					return false;
+					
+				//Recorremos cada cara del puzzle
+				for(var i=1; i<7; i++)
+				{
+					//Obtenemos los cubos que forman la cara
+					var faceCubes = getFaceCubes(i, center);
+					
+					//Comprobamos que el cubo del centro (indice 4) tiene una seccion con coordenadas 1,1, es decir del centro de la imagen
+					if(faceCubes[4].facesInf[getFace(faceCubes[4],i).x-1].y != 1 || faceCubes[4].facesInf[getFace(faceCubes[4],i).x-1].z != 1)
+						//Si no tiene una seccion central no esta solucionado el puzzle
+						return false;
+					
+					//Recorremos cada cubo de la cara para comprobar si todas las caras tienen la misma imagen y la misma rotacion
+					for(var j=0; j<faceCubes.length-1; j++)
+					{
+						//Comparamos cada imagen de la cara con la siguiente
+						if(faceCubes[j].facesInf[getFace(faceCubes[j],i).x-1].x != faceCubes[j+1].facesInf[getFace(faceCubes[j+1],i).x-1].x)
+							return false;
+						
+						//Diferencia en esta seccion
+						var currentDif = getFace(faceCubes[j],i).y - faceCubes[j].facesInf[getFace(faceCubes[j],i).x-1].w;
+						if(currentDif < 0)
+							currentDif+=360;
+						//Diferencia en la seccion siguiente
+						var nextDif = getFace(faceCubes[j+1],i).y - faceCubes[j+1].facesInf[getFace(faceCubes[j+1],i).x-1].w;
+						if(nextDif < 0)
+							nextDif+=360;
+						//Comparamos la diferencia de rotacion entre la actual y la original de cada seccion con la siguiente
+						if(currentDif != nextDif)
+							return false;
+					}
+				}
+				
+				//Si se llega a este punto es que todas las caras estan bien formadas
+				return true;
+			}*/
+
+/************************************************/
+/*		Funciones varias						*/	
+/************************************************/
+			
+			
+			//Funcion para comparar vectores de tres componenetes X, Y, Z
+			//Primero compara X, si son iguales compara Y, y si tambien son iguales compara Z
+			//-1 -> menor que
+			//1  -> mayor que
+			//0  -> igual
+			/*function compareVector3(a, b)
+			{
+				if(a.x < b.x) //X menor que				
+					return -1;					
+				else if(a.x > b.x) //X mayor que
+					return 1;
+				else if(a.y < b.y) //X igual Y menor que
+					return -1;
+				else if(a.y > b.y) //X igual Y mayor que
+					return 1;
+				else if(a.z < b.z) //X Y igual Z menor que
+					return -1;
+				else if(a.z > b.z) //X Y igual Z mayor que
+					return 1;
+				else //X Y Z iguales
+					return 0;
+			}
+			
+			//Funcion para aproximar a la potencia de dos mas cercana
+			function round2Power(number)
+			{
+				var logarithm, rounded, power;
+				logarithm = Math.log(number) / Math.log(2);
+				power = Math.round(logarithm);
+				rounded = Math.pow(2, power);
+				return rounded;
+			}
+			
+			//Funcion para aproximar al angulo multiplo de 90 grados mas cercano
+			function roundAngle(angle)
+			{
+				var div, rounded;
+				div = angle/(Math.PI/2);
+				rounded = (Math.PI/2)*Math.round(div);
+				return rounded;
+			}
+			
+			//Pasar de grados a radianes y viceversa
+			function deg2Rad(degrees)
+			{
+				return degrees * Math.PI / 180;
+			}			
+			function rad2Deg(rad)
+			{
+				return rad / Math.PI * 180;
+			}
+    
+			//Funcion para cargar texturas
+			//Basada en la funcion THREE.ImageUtils.loadTexture
+			function loadTexture(path, mapping, callback)
+			{
+				var image = new Image(), texture = new THREE.Texture( image, mapping );
+				image.onload = function (){
+					texture.needsUpdate = true;
+				};
+				image.crossOrigin = 'anonymous';
+				image.src = path;
+				
+				return texture;
+			}
+			
+			//Fuente : http://sroucheray.org/blog/2009/11/array-sort-should-not-be-used-to-shuffle-an-array/
+			/*
+			 * Add a shuffle function to Array object prototype
+			 * Usage :
+			 *  var tmpArray = ["a", "b", "c", "d", "e"];
+			 *  tmpArray.shuffle();
+			 */
+			/*function shuffle(array){
+				var i = array.length, j, temp;
+				if ( i == 0 ) return;
+				while ( --i ) {
+					j = Math.floor( Math.random() * ( i + 1 ) );
+					temp = array[i];
+					array[i] = array[j];
+					array[j] = temp;
+				}
+			}*/
+}
+			
+/************************************************/
+/*		Inicio del mundo 3D						*/	
+/************************************************/
+			function init()
+			{
+				//Creamos y añadimos un contenedor para el render
+				container = document.createElement('div');
+				document.body.appendChild(container);
+				
+				//Creamos una escena
+				scene = new THREE.Scene();
+				
+				//Creamos una camara, la movemos hacia atras y 
+				//la añadimos a la escena
+				camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 6000);
+				camera.position.z = 2000;
+				scene.add(camera);
+				
+				
+				puzzle = new Puzzle();
+				
+				/****************************************************/
+				//Creamos un array con todos los materiales, uno por imagen
+				for(var j=0; j<18; j++)
+				{
+					//Obtenemos la textura de la imagen
+					texture = loadTexture('img/img'+(j+1)+'.gif');
+					IMAGES.push( new THREE.MeshBasicMaterial( { map: texture} ) );
+				}
+				
+				//Creamos un array con las posiciones iniciales
+				var positions = [];
+				//Posiciones laterales
+				for(var i=0; i<24; i++)
+					positions.push(new THREE.Vector3(250*(Math.floor(i/6)) + (((Math.floor(i/6)) < 2) ? -1000 : 250), 250*(i%6) - 625, 0));
+				//Posiciones inferiores
+				for(var i=0; i<3; i++)
+					positions.push(new THREE.Vector3(300*i - 300, -625, 0));
+				//Desordenamos el array
+				//shuffle(positions);
+				
+				//Creamos los cubos de las soluciones
+				for(var i=0; i<3; i++)
+				{
+					var materials = [];
+					for(var j=0; j<6; j++)
+						materials.push(IMAGES[j+i*6]);
+					solutionCubes[i] = new THREE.Mesh( new THREE.CubeGeometry( 400, 400, 400, 1,1,1, materials ), new THREE.MeshFaceMaterial() );
+					solutionCubes[i].position.x = 1500;
+					solutionCubes[i].position.y = i*500 - 500;
+					solutionCubes[i].rotation.y = -0.51;
+					//Añadimos la figura a la escena
+					scene.add(solutionCubes[i]);
+					//Lo introducimos en el array de objetos de la escena
+					objects.push(solutionCubes[i]);
+					
+				}
+				
+				//Creamos los cubos
+				{
+				var cubeSize = 200;
+				
+				//Primero los tres cubos con dos vertices cada uno
+				
+				//Solucion 1 vertice -1,-1,-1 y solucion 2 vertice 1,1,1
+				var cube = new Cube(IMAGES, cubeSize, [6,1,8,3,10,5], [new THREE.Vector3(0,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(2,2,0), new THREE.Vector3(0,2,0), new THREE.Vector3(2,0,0), new THREE.Vector3(2,2,0) ], positions[0], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 vertice 1,-1,-1 y solucion 3 vertice -1,1,1 
+				var cube = new Cube(IMAGES, cubeSize, [0,13,14,3,16,5], [new THREE.Vector3(2,2,0), new THREE.Vector3(2,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(2,2,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,2,0) ], positions[1], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 2 vertice -1,1,-1 y solucion 3 vertice 1,-1,1
+				var cube = new Cube(IMAGES, cubeSize, [12,7,8,15,16,11], [new THREE.Vector3(0,2,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(2,0,0), new THREE.Vector3(2,2,0), new THREE.Vector3(2,0,0) ], positions[2], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Luego los 18 cubos con 1 vertice 1 arista y 1 cara
+				
+				//Solucion 1 vertice -1,1,-1, solucion 2 arista 1,-1,0 y solucion 3 cara 0,0,1
+				var cube = new Cube(IMAGES, cubeSize, [6,1,2,9,16,5], [new THREE.Vector3(1,2,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,0,0) ], positions[3], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 vertice 1,1,-1 , solucion 2 cara -1,0,0 y solucion 3 arista 0,-1,1
+				var cube = new Cube(IMAGES, cubeSize, [0,7,2,15,16,5], [new THREE.Vector3(2,0,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,0,0), new THREE.Vector3(1,2,0), new THREE.Vector3(0,0,0) ], positions[4], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 vertice -1,1,-1 , solucion 2 arista 0,-1,-1 y solucion 3 cara 1,0,0
+				var cube = new Cube(IMAGES, cubeSize, [12,1,2,9,4,11], [new THREE.Vector3(1,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,2,0), new THREE.Vector3(0,0,0), new THREE.Vector3(1,2,0) ], positions[5], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 vertice 1,1,1 , solucion 2 cara 0,0,-1 y solucion 3 arista -1,-1,0
+				var cube = new Cube(IMAGES, cubeSize, [0,13,2,15,4,11], [new THREE.Vector3(0,0,0), new THREE.Vector3(1,2,0), new THREE.Vector3(2,2,0), new THREE.Vector3(0,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,1,0) ], positions[6], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 vertice -1,-1,1 , solucion 2 arista 1,1,0 y solucion 3 cara 0,0,-1
+				var cube = new Cube(IMAGES, cubeSize, [6,1,8,3,4,17], [new THREE.Vector3(1,0,0), new THREE.Vector3(2,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,1,0) ], positions[7], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 vertice 1,-1,1 , solucion 2 cara 0,1,0 y solucion 3 arista -1,0,-1
+				var cube = new Cube(IMAGES, cubeSize, [0,13,8,3,4,17], [new THREE.Vector3(0,2,0), new THREE.Vector3(0,1,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(2,2,0), new THREE.Vector3(2,1,0) ], positions[8], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 0,-1,1 , solucion 2 vertice 1,1,-1 y solucion 3 cara -1,0,0
+				var cube = new Cube(IMAGES, cubeSize, [6,13,8,3,4,11], [new THREE.Vector3(2,0,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,0,0), new THREE.Vector3(1,2,0), new THREE.Vector3(0,0,0) ], positions[9], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 cara 1,0,0 , solucion 2 vertice -1,-1,-1 y solucion 3 arista 0,1,1
+				var cube = new Cube(IMAGES, cubeSize, [0,7,14,9,16,11], [new THREE.Vector3(1,1,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,2,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,0,0), new THREE.Vector3(2,2,0) ], positions[10], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista -1,0,1 , solucion 2 vertice 1,-1,-1 y solucion 3 cara 0,1,0
+				var cube = new Cube(IMAGES, cubeSize, [6,1,14,9,4,11], [new THREE.Vector3(2,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,2,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,2,0) ], positions[11], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 1,0,-1  , solucion 2 vertice -1,1,1 y solucion 3 cara 0,-1,0
+				var cube = new Cube(IMAGES, cubeSize, [0,7,8,15,10,5], [new THREE.Vector3(2,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,1,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,1,0) ], positions[12], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 cara 0,1,0 , solucion 2 vertice -1,-1,1 y solucion 3 arista 1,0,-1
+				var cube = new Cube(IMAGES, cubeSize, [12,7,2,9,10,17], [new THREE.Vector3(2,1,0), new THREE.Vector3(2,2,0), new THREE.Vector3(1,1,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(0,1,0) ], positions[13], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 cara -1,0,0 , solucion 2 vertice 1,-1,1 y solucion 3 arista 0,1,-1
+				var cube = new Cube(IMAGES, cubeSize, [6,1,14,9,10,17], [new THREE.Vector3(0,2,0), new THREE.Vector3(1,1,0), new THREE.Vector3(1,0,0), new THREE.Vector3(2,0,0), new THREE.Vector3(2,2,0), new THREE.Vector3(1,0,0) ], positions[14], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 1,0,1 , solucion 2 cara 0,-1,0 y solucion 3 vertice -1,1,-1
+				var cube = new Cube(IMAGES, cubeSize, [0,13,14,9,4,17], [new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,1,0), new THREE.Vector3(2,0,0) ], positions[15], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 cara 0,-1,0 , solucion 2 arista -1,0,1 y solucion 3 vertice  1,1,-1
+				var cube = new Cube(IMAGES, cubeSize, [12,7,14,3,10,17], [new THREE.Vector3(2,0,0), new THREE.Vector3(2,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,1,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0) ], positions[16], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 1,1,0 , solucion 2 cara 0,0,1 y solucion 3 vertice -1,-1,-1
+				var cube = new Cube(IMAGES, cubeSize, [0,13,2,15,10,17], [new THREE.Vector3(1,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,1,0), new THREE.Vector3(2,2,0) ], positions[17], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 cara 0,0,1 , solucion 2 arista -1,1,0 y solucion 3 vertice 1,-1,-1
+				var cube = new Cube(IMAGES, cubeSize, [12,7,8,15,4,17], [new THREE.Vector3(2,2,0), new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(2,2,0), new THREE.Vector3(1,1,0), new THREE.Vector3(0,2,0) ], positions[18], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 cara 0,0,-1 , solucion 2 arista -1,-1,0 y solucion 3 vertice 1,1,1
+				var cube = new Cube(IMAGES, cubeSize, [12,7,14,9,16,5], [new THREE.Vector3(0,0,0), new THREE.Vector3(1,2,0), new THREE.Vector3(2,2,0), new THREE.Vector3(0,1,0), new THREE.Vector3(2,0,0), new THREE.Vector3(1,1,0) ], positions[19], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 0,1,-1 , solucion 2 cara 1,0,0 y solucion 3 vertice -1,-1,1
+				var cube = new Cube(IMAGES, cubeSize, [6,13,2,15,16,5], [new THREE.Vector3(1,1,0), new THREE.Vector3(2,2,0), new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,2,0), new THREE.Vector3(1,0,0) ], positions[20], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Finalmente los 6 cubos con 3 aristas
+				
+				//Solucion 1 arista -1,0,-1 , solucion 2 arista 0,-1,1 y solucion 3 arista 1,1,0
+				var cube = new Cube(IMAGES, cubeSize, [12,1,14,9,10,5], [new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,0,0), new THREE.Vector3(1,2,0), new THREE.Vector3(2,1,0) ], positions[21], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 0,-1,-1 , solucion 2 arista 1,0,1 y solucion 3 arista -1,1,0
+				var cube = new Cube(IMAGES, cubeSize, [6,13,14,3,10,5], [new THREE.Vector3(0,1,0), new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(1,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,2,0) ], positions[22], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista  , solucion 2 arista  y solucion 3 arista 
+				var cube = new Cube(IMAGES, cubeSize, [12,7,2,15,4,11], [new THREE.Vector3(1,2,0), new THREE.Vector3(0,1,0), new THREE.Vector3(1,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,0,0), new THREE.Vector3(2,1,0) ], positions[23], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista -1,-1,0 , solucion 2 arista 0,1,1 y solucion 3 arista -1,0,1
+				var cube = new Cube(IMAGES, cubeSize, [16,1,2,8,13,10], [new THREE.Vector3(0,1,0), new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(1,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,0,180) ], positions[24], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista -1,-1,0 , solucion 2 arista 1,0,-1 y solucion 3 arista 0,-1,-1
+				var cube = new Cube(IMAGES, cubeSize, [6,1,17,3,15,11], [new THREE.Vector3(2,1,0), new THREE.Vector3(1,2,0), new THREE.Vector3(1,2,0), new THREE.Vector3(0,1,0), new THREE.Vector3(1,2,180), new THREE.Vector3(0,1,0) ], positions[25], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				
+				//Solucion 1 arista 1,-1,0 , solucion 2 arista 0,1,-1 y solucion 3 arista 1,0,1
+				var cube = new Cube(IMAGES, cubeSize, [0,16,8,3,12,11], [new THREE.Vector3(1,2,0), new THREE.Vector3(2,1,0), new THREE.Vector3(1,0,0), new THREE.Vector3(2,1,0), new THREE.Vector3(0,1,0), new THREE.Vector3(1,0,0) ], positions[26], 3);
+				//Añadimos la figura a la escena
+				scene.add(cube);
+				//Lo introducimos en el array de objetos de la escena
+				objects.push(cube);
+				cubes.push(cube);
+				}
+				
+				//Creamos un cuadrado para delimitar el area del puzzle
+				var geometry = new THREE.Geometry();
+				var vertice
+				vertice = new THREE.Vector3(-500,-500, 0 );
+				geometry.vertices.push(vertice);
+				vertice = new THREE.Vector3(500,-500, 0 );
+				geometry.vertices.push(vertice);
+				vertice = new THREE.Vector3(500,500, 0 );
+				geometry.vertices.push(vertice);
+				vertice = new THREE.Vector3(-500,500, 0 );
+				geometry.vertices.push(vertice);
+				vertice = new THREE.Vector3(-500,-500, 0 );
+				geometry.vertices.push(vertice);
+				var line = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0xff0000 } ) );
+				scene.add(line);
+				
+				//Añadimos el puzzle a la escena
+				scene.add(puzzle.getPuzzle());
+				objects.push(puzzle.getPuzzle());
+				
+				//Creamos un reloj para cronometrar
+				timer = new THREE.Clock(false);
+				
+				//Creamos el render y fijamos su tamaño
+				renderer = new THREE.WebGLRenderer();
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				windowHeight = window.innerHeight;
+				windowWidth = window.innerWidth;
+				
+				//Introduciomos el render en el contenedor
+				container.appendChild(renderer.domElement);
+				
+				
+				
+	var p = new THREE.Mesh( new THREE.PlaneGeometry( 10000, 10000 ), new THREE.MeshBasicMaterial( { color: 0xffffff, opacity: 0.5, transparent: true } ) );
+	p.position.y = 100;
+	p.rotation.x = - Math.PI / 2;
+	scene.add( p );
+	
+	var dirLight = new THREE.DirectionalLight( 0xffffff, 0.125 );
+	dirLight.position.set( 0, 0, 1 ).normalize();
+	scene.add( dirLight );
+	
+	var pointLight = new THREE.PointLight( 0xffffff, 1.5 );
+	pointLight.position.set( 0, 100, 90 );
+	scene.add( pointLight );
+				
+        
+    renderer.autoClear = false;
+
+    var renderModel = new THREE.RenderPass( scene, camera );
+    var effectBloom = new THREE.BloomPass( 0.25 );
+    var effectFilm = new THREE.FilmPass( 0.5, 0.125, 2048, false );
+
+    effectFXAA = new THREE.ShaderPass( THREE.FXAAShader );
+
+    var width = window.innerWidth || 2;
+    var height = window.innerHeight || 2;
+
+    effectFXAA.uniforms[ 'resolution' ].value.set( 1 / width, 1 / height );
+
+    effectFilm.renderToScreen = true;
+
+    composer = new THREE.EffectComposer( renderer );
+
+    composer.addPass( renderModel );
+    composer.addPass( effectFXAA );
+    composer.addPass( effectBloom );
+    composer.addPass( effectFilm );
+				
+				//Introducimos un pequeño texto de informacion
+				var info = document.createElement( 'div' );
+				info.style.position = 'absolute';
+				info.style.top = '10px';
+				info.style.width = '100%';
+				info.style.textAlign = 'center';
+				info.innerHTML = '<a href="http://github.com/mrdoob/three.js" target="_blank">three.js</a> webgl - magnetic puzzle cube<br>left mouse to move, rigth to rotate and central to restore<br><input type="checkbox" id="showS" onclick="showSolutions()"checked ><label for="showS">Show solutions</label>';
+				container.appendChild( info );
+				
+				//Boton debug
+				var input = document.createElement('div');
+				input.style.position = 'absolute';
+				input.style.top = '100px';
+				container.appendChild(input);
+				var boton = document.createElement('input');
+				boton.type = 'button';
+				boton.onclick = recargar;
+				boton.value = 'Debug';
+				input.appendChild(boton);
+				
+				//Creamos un cuadro de estadisticas
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				container.appendChild(stats.domElement);
+				
+				cont = new PuzzleController(camera);
+			}
+			
+{
+/************************************************/
+/*		Manejo de los eventos del raton			*/	
+/************************************************/
+			
+/***********Boton del raton pulsado**************//*
+			function onDocumentMouseDown(event)
+			{
+				//Impedimos que se produzca la accion por defecto
+				event.preventDefault();
+				
+				//Creamos un vector en la direccion del raton hacia la escena
+				var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+				projector.unprojectVector( vector, camera );
+				var ray = new THREE.Ray( camera.position, vector.subSelf( camera.position ).normalize() );
+
+				//Si es el boton derecho
+				if(event.button == 2)
+				{
+					//Activamos el flag del boton derecho
+					rightDown = true;
+					
+					//Obtenemos la posicion del raton
+					lastMouseX = event.clientX;
+					lastMouseY = event.clientY;
+					
+					plane.position.z=0;
+					//Obtenemos la interseccion entre el vector y el plano
+					var intersects = ray.intersectObject( plane );
+					//Si el raton esta en la zona del puzzle
+					if(puzzle.isPuzzleZone(intersects[0].point))
+					{
+						//Seleccionamos el grupo para girar este en vez de una figura individual
+						SELECTED = puzzle.getPuzzle();
+						//Cambiamos al cursor de movimiento
+						container.style.cursor = 'crosshair';
+						return;
+					}
+				}
+				
+				//Si es el boton central
+				if(event.button == 1)
+				{
+					for(var i=0; i<cubes.length; i++)
+					{
+						cubes[i].rotation.x = cubes[i].rotation.y = cubes[i].rotation.z = 0;
+						cubes[i].position.copy(cubes[i].posIni);
+						scene.add(cubes[i]);
+						puzzle.getPuzzle().rotation.x = puzzle.getPuzzle().rotation.y = puzzle.getPuzzle().rotation.z = 0;
+						plane.position.z = 0;
+						startTime = Date.now();
+						isDone = false;
+					}
+				}
+				
+				//Si es el boton izquierdo
+				if(event.button == 0)
+				{
+					//Activamos el flag del boton izquierdo
+					leftDown = true;
+				}	
+				
+				//Obtenemos los objetos que son atravesados por el vector
+				var intersects = ray.intersectObjects( objects );
+				
+				//Si hay algun objeto
+				if ( intersects.length > 0 ) {
+
+					//Obtenemos el primer objeto atravesado, que sera el seleccionado, el que esta delante
+					SELECTED = intersects[ 0 ].object;
+					
+					//Si el boton pulsado es el izquierdo y esta en el puzzle
+					if(leftDown && SELECTED.parent == puzzle.getPuzzle())
+					{
+						//Calculamos las coordenadas en el mundo de la figura a partir de las que tenia en el puzzle
+						SELECTED.position.copy(puzzle.worldCoordFromPuzzlePosition(SELECTED.position));
+						//Calculamos la rotacion en el mundo de la figura a partir de la que tenia en el puzzle
+						SELECTED.rotation.copy(puzzle.worldRotationFromPuzzleRotation(SELECTED.rotation));
+						//Añadimos la figura a la escena, con lo cual se borrara tambien del grupo del puzzle
+						scene.add(SELECTED);
+					}
+
+					//Cambiamos al cursor de movimiento
+					container.style.cursor = 'move';
+					
+					//Si es la primera vez que se hace click iniciamos el cronometro
+					if(!(startTime))
+						startTime = Date.now();
+				}
+			}
+			
+/***********Raton desplazado*********************//*
+			function onDocumentMouseMove(event)
+			{
+				//Impedimos que se produzca la accion por defecto
+				event.preventDefault();				
+				
+				windowHeight = window.innerHeight;
+				windowWidth = window.innerWidth;
+				//Calculamos donde esta el raton con el eje de coordenadas en el centro
+				mouse.x = ( event.clientX / windowWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / windowHeight ) * 2 + 1;
+				
+				//Creamos un vector en la direccion del raton hacia la escena
+				var vector = new THREE.Vector3( mouse.x, mouse.y, 0.5 );
+				projector.unprojectVector( vector, camera );
+				var ray = new THREE.Ray( camera.position, vector.subSelf( camera.position ).normalize() );
+				//Calculamos la interseccion con el plano
+				var intersects = ray.intersectObject( plane );
+				
+				//Si esta pulsado el boton derecho y hay algun objeto seleccionado
+				if(rightDown && SELECTED)
+				{
+					//Obtenemos la posicion del raton
+					var mouseX = event.clientX;
+					var mouseY = event.clientY;
+					
+					//Creamos una variable para guardar la figura que se va a girar
+					var toRotate;
+					
+					//Comprobamos que la figura no esta en el puzzle
+					if(SELECTED.parent == puzzle.getPuzzle())
+						toRotate = puzzle.getPuzzle();
+					else
+						toRotate = SELECTED;
+					
+					//Giramos el cubo
+					//Creamos una matriz temporal para hacer transformaciones
+					var temp = new THREE.Matrix4();
+					//Introducimos la nueva rotacion
+					temp.setRotationFromEuler(new THREE.Vector3(0.04 * (mouseY - lastMouseY), 0.04 * (mouseX - lastMouseX), 0));
+					//La transformamos segun la rotacion de la figura
+					toRotate.updateMatrix();
+					temp.multiply(temp, toRotate.matrix);
+					//Extraemos la rotacion de la matriz y la guardamos en el vector
+					toRotate.rotation.getRotationFromMatrix(temp);
+								
+					//Guardamos la posicion para la siguiente llamada
+					lastMouseX = mouseX;
+					lastMouseY = mouseY;
+					//Y salimos del evento
+					return;
+				}
+
+				//Si esta seleccionado algun objeto y esta pulsado el boton izquierdo
+				if(leftDown && SELECTED)
+				{
+					//Si el objeto seleccionado no es el grupo ni ninguna de las soluciones, ni esta solucionado el puzzle, entonces movemos el objeto
+					if(SELECTED != puzzle.getPuzzle() && SELECTED != solutionCubes[0] && SELECTED != solutionCubes[1] && SELECTED != solutionCubes[2] && !isDone)
+					{	
+						
+						//Si el raton se encuentra en la zona de movimiento
+						if(intersects[0].point.x <= solSize && event.clientX >= 0 && event.clientX <= windowWidth && event.clientY >= 0 && event.clientY <= windowHeight)
+							//Movemos la figura seleccionada
+							SELECTED.position.copy(intersects[0].point);
+					
+						//Comprobamos si esta en la zona del puzzle
+						if(puzzle.isPuzzleZone(SELECTED.position))
+						{
+							//Obtenemos el objeto que es atravesado por el vector sin contar la figura seleccionada
+							var intersects = ray.intersectObjects( objects );
+							var intersector = null;
+							for( i = 0; i < intersects.length; i++ )
+								if ( intersects[i].object != SELECTED )
+								{
+									intersector=intersects[i];
+									break;
+								}
+							
+							//Si hay un objeto
+							if(intersector)
+								//Movemos tanto el plano de desplazamiento como la figura hacia delante
+								//tanto como este la figura anterior mas la mitad del tamaño de la seleccionada
+								plane.position.z = SELECTED.position.z = intersector.point.z + 100;
+							//Si no hay objetos atravesados sin contar el seleccionado y la figura no esta en Z=0
+							else if(SELECTED.position.z != 0)
+								//Movemos tanto la figura como el plano de desplazamiento a Z=0
+								SELECTED.position.z = plane.position.z = 0;
+						}
+						//Si no esta en la zona del puzzle pero no esta en Z=0
+						else if(SELECTED.position.z != 0)
+								//Movemos tanto la figura como el plano de desplazamiento a Z=0
+								SELECTED.position.z = plane.position.z = 0;
+							
+					}
+					
+					//Y salimos del evento
+					return;
+				}
+				
+				//Si llegamos hasta aqui es que no esta seleccionado ningun objeto
+				//Obtenemos los objetos que son atravesados por el vector
+				var intersects = ray.intersectObjects( objects );
+				
+				//Si hay objetos atravesados
+				if(intersects.length > 0)
+				{
+					//Si no esta pulsado el boton derecho del raton
+					if(!rightDown)
+						//Cambiamos al cursor de seleccion
+						container.style.cursor = 'pointer';
+				}
+				
+				//Si no hay objetos atravesados
+				else
+					//Si no esta pulsado el boton derecho del raton
+					if(!rightDown)
+						//Usamos el cursor por defecto
+						container.style.cursor = 'auto';
+			}
+			
+/***********Boton del raton soltado**************//*
+			function onDocumentMouseUp(event)
+			{
+				//Impedimos que se produzca la accion por defecto
+				event.preventDefault();
+				
+				//Si es el boton derecho
+				if(event.button == 2)
+				{
+					//Desactivamos el flag de boton derecho pulsado
+					rightDown = false;
+					//Si no esta pulsado el boton izquierdo
+					if(!leftDown)
+					{
+						//Deseleccionamos el objeto seleccionado
+						SELECTED = null;
+						//Usamos el cursor por defecto
+						container.style.cursor = 'auto';
+					}
+				}
+				
+				//Si es el boton izquierdo
+				if(event.button == 0)
+				{
+					//Desactivamos el flag de boton izquierdo pulsado
+					leftDown = false;
+					//Si hay algun objeto seleccionado
+					if(SELECTED)
+					{
+						//Si se suelta en la zona del puzzle
+						if(SELECTED != puzzle.getPuzzle() && puzzle.isPuzzleZone(SELECTED.position))
+						{
+							//Calculamos las nuevas posicion y rotacion respecto al puzzle
+							SELECTED.position.copy(puzzle.positionPuzzle(SELECTED));
+							SELECTED.rotation.copy(puzzle.rotationPuzzle(SELECTED));
+							//Y añadimos la figura al puzzle
+							puzzle.getPuzzle().add(SELECTED);
+							
+							//Si se han introducido todas las piezas en el puzzle y no se habia resuelto
+							if(puzzle.getPuzzle().children.length == 27 && !isDone)
+							{
+								//Tiempo transcurrido en segundos
+								var time = (Date.now() - startTime)/1000;
+								if(puzzle.isSolved())
+								{
+									//Minutos
+									var minutes = Math.floor(time/60);
+									//Segundos, solo con tres decimales
+									var seconds = Math.round((time % 60)*1000)/1000;
+									isDone = true;
+									alert("Puzzle solucionado !!!\nen "+minutes+" minutos y "+seconds);
+								}
+								else
+									alert("Esta no es una de las soluciones");
+							}
+						}
+						//Si no esta pulsado el boton derecho
+						if(!rightDown)
+						{
+							//Deseleccionamos el objeto seleccionado
+							SELECTED = null;
+							//Usamos el cursor por defecto
+							container.style.cursor = 'auto';
+						}
+					}
+				}
+			}*/
+}
+
+			//Funcion que es llamada cada vez que se hace click en le checkbox de mostrar las soluciones
+			function showSolutions()
+			{
+				var checkShowSol = document.getElementById('showS');
+				//Soluciones activadas
+				if(checkShowSol.checked)
+				{
+					for(var i=0; i<3; i++)
+					{
+						scene.add(solutionCubes[i]);
+						objects.push(solutionCubes[i]);
+					}
+				}
+				//Soluciones desativadas
+				else
+				{
+					for(var i=0; i<3; i++)
+					{
+						scene.remove(solutionCubes[i]);
+						objects.splice(objects.indexOf(solutionCubes[i]),1);
+					}
+				}
+			}
+			
+			
+			function animate()
+			{
+				//Hacemos una peticion para animacion
+				requestAnimationFrame(animate);
+				
+				//Renderizamos la escena
+				render();
+				//Actualizamos las estadisticas
+				stats.update();
+			}
+			
+			function render()
+			{
+				//Renderizamos la escena
+				//renderer.render(scene, camera);
+				composer.render( 0.05 );
+			}
+			
+		</script>
+		
+	</body>
+	
+</html>
