@@ -177,17 +177,28 @@ function ClassicModeView (sce, numC, mats)
  * */
 function finish()
 { 
+    //Marcamos el flag de modo terminado
     finished = true;
+    //Reproducimos el sonido final
     sound.playFinal();
+    //Paramos el reloj y obtenemos el tiempo
     var time = cl.finish();
+    //Obtenemos el mensaje que se mostrara
     var sec = time % 60;
     var min = Math.floor(time/60) % 60;
     var hour = Math.floor(time/3600);
-    var cad = "Enhorabuena!!! Puzzle solucionado ! en ";
+    var text = "Enhorabuena!!! Puzzle solucionado ! en ";
     if(hour != 0)
-        cad+=hour+" horas, ";
-    cad+=min+" minutos y "+sec+" segundos";
-    alert(cad);
+        text+=hour+" horas, ";
+    text+=min+" minutos y "+sec+" segundos";
+    //Si no tenemos creada una vista para las puntuaciones la creamos
+    if(sv == undefined)
+    {
+        sv = new ScoresView();
+        sv.hide();
+    }
+    //Mostramos el dialogo para guardar la puntuacion
+    sv.saveScoreDialog(text, time , 0, 3-numberOfCubes);
 }
  
  

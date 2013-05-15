@@ -3,23 +3,20 @@
 	<head>
 		<title>Magnetic Puzzle Cube</title>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimun-scale=1.0, maximun-scale=1.0">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
 			body {
-				background-color: #f0f0f0;
 				margin: 0px;
 				overflow: hidden;
-			}
-			canvas
-			{
-				
 			}
 		</style>
 		<link href='css/StalinistOne-Regular.css' rel='stylesheet' type='text/css'>
 		<link href='css/style.css' rel='stylesheet' type='text/css'>
+		<link href='img/levels/level2.gif' rel='icon' type='image/gif'/>
 	</head>
 	<body>
 		<script src="js/three.min.js"></script> <!--https://github.com/mrdoob/three.js-->
+		<script src="js/Detector.js"></script> <!--https://github.com/mrdoob/three.js-->
 		<script src="js/html5slider/html5slider.js"></script> <!--https://github.com/fryn/html5slider-->
 		
 		<script src="js/fonts/gentilis_bold.typeface.js"></script>
@@ -33,7 +30,6 @@
 		<script src="js/fonts/droid/droid_serif_regular.typeface.js"></script>
 		<script src="js/fonts/droid/droid_serif_bold.typeface.js"></script>
 		
-		<script src="js/Stats.js"></script>
 		<script src="Utils.js"></script>
 		
 		<script src="PuzzleView.js"></script>
@@ -76,6 +72,9 @@
 		<script src="OptionsController.js"></script>
 		<script src="Options.js"></script>
 		
+		<script src="ScoresView.js"></script>
+		<script src="ScoresController.js"></script>
+		
 		<script src="Clock.js"></script>
 		<script src="Sound.js"></script>
 		
@@ -83,6 +82,15 @@
 		<script src="Socket.js"></script>
 		
 		<script>
+			//Comprobamos que WebGL esta disponible
+			if ( ! Detector.webgl )
+			{
+				Detector.addGetWebGLMessage();
+				var WebGLavaible = false
+			}
+			else
+				var WebGLavaible = true;
+			
 			//Datos para la creacion de un puzzle con 3 soluciones
 			var puzzle3Data;
 			//Flag para saber si se han cargado los datos del puzzle de 3 soluciones
@@ -99,22 +107,6 @@
 			var levelsData;
 			//Flag para saber si la informacion de los niveles esta cargada
 			var levelsLoad = false;
-			
-			//Realizamos la peticion de los datos para la informacion de los niveles
-			//Leemos los datos para crear los cubos de un fichero JSON
-			var requestLevels = new XMLHttpRequest();
-			requestLevels.open("GET", "data/Levels.json");
-			//Definimos la accion para cuando se cargue el fichero
-			requestLevels.onreadystatechange = function () { if (requestLevels.readyState == 4)
-			{
-					//Transformamos los datos del fichero a notacion JSON
-					levelsData= JSON.parse(requestLevels.responseText).data;
-					//Activamos el flag
-					levelsLoad = true;
-					
-			} }
-			//Enviamos la peticion del fichero
-			requestLevels.send();
 				
 			//Realizamos la peticion de los datos para un puzzle de 3 soluciones
 			//Leemos los datos para crear los cubos de un fichero JSON
@@ -149,7 +141,7 @@
 			request2.send();
 			
 			//Elementos html
-			var container, stats;
+			var container;
 			var backgroundColor =0xf0f0f0;
 			
 			//Objetos del engine
@@ -157,13 +149,6 @@
 			
 			//Array con los materiales de cada imagen
 			var IMAGES = [];
-			
-			//Figuras
-			var solutionCubes = [];
-			//Array con todas las figuras que saldran en la escena
-			var objects = [];
-			//Array con los cubos
-			var cubes = [];
 			
 			//Vistas de la aplicacion
 			var pv; //Puzzle
@@ -175,10 +160,10 @@
 			var smv; //Modo supervivencia
 			var mmv; //Modo multijugador
 			var ov; //Opciones
+			var sv; //Puntuaciones
 			
 			//Objeto que administrara el sonido
-			var sound;
-			
+			var sound;			
 			//Socket para la comunicacion con el servidor para el modo multijugador
 			var socket;
 			
@@ -186,23 +171,22 @@
 			var windowHeight;
 			var windowWidth;
 			
-			//Iniciamos y lanzamos la aplicacion
-			init();
-			animate();
+			//Si webGL esta disponible
+			if(WebGLavaible)
+			{
+				//Iniciamos y lanzamos la aplicacion
+				init();
+				animate();
+			}
 
-
-
-/************************************************/
-/*		Inicio del mundo 3D						*/	
-/************************************************/
+/************************************************
+ *		Inicio del mundo 3D
+ ************************************************/
 			function init()
 			{
 				document.body.style.background = '#'+backgroundColor.toString(16);
 				windowHeight = window.innerHeight;
-				windowWidth = window.innerWidth;				
-				
-				//Iniciamos el sonido
-				sound = new Sound();
+				windowWidth = window.innerWidth;
 				
 				//Creamos y añadimos un contenedor para el render
 				container = document.createElement('div');
@@ -222,7 +206,7 @@
 				}				
 				
 				//Iniciamos el menu principal
-				//Leemos los datos para crear los cubos de un fichero JSON
+				//Leemos los datos para crear las letras de un fichero JSON
 				var request = new XMLHttpRequest();
 				request.open("GET", "data/Letters.json");
 				//Definimos la accion para cuando se cargue el fichero
@@ -233,8 +217,21 @@
 						//Transformamos los datos del fichero a notacion JSON
 						lettersData = JSON.parse(request.responseText);
 						lettersLoad = true;
-						mv = new MenuView(scene);
-						
+						//Realizamos la peticion de los datos para la informacion de los niveles
+						//Leemos los datos para crear los cubos de un fichero JSON
+						var requestLevels = new XMLHttpRequest();
+						requestLevels.open("GET", "data/Levels.json");
+						//Definimos la accion para cuando se cargue el fichero
+						requestLevels.onreadystatechange = function () { if (requestLevels.readyState == 4)
+						{
+								//Transformamos los datos del fichero a notacion JSON
+								levelsData= JSON.parse(requestLevels.responseText).data;
+								//Activamos el flag
+								levelsLoad = true;
+								mv = new MenuView(scene);
+						} }
+						//Enviamos la peticion del fichero
+						requestLevels.send();
 					}
 				}
 				//Enviamos la peticion del fichero
@@ -257,15 +254,10 @@
 					renderer.setSize(windowWidth, windowHeight);					
 				}
 				
+				//Iniciamos el sonido
+				sound = new Sound();
 				//Creamos las opciones
 				ov = new OptionsView();
-				
-				//Creamos un cuadro de estadisticas
-				stats = new Stats();
-				stats.domElement.style.position = 'absolute';
-				stats.domElement.style.bottom = '0px';
-				stats.domElement.style.right = '0px';
-				container.appendChild(stats.domElement);
 			}			
 			
 			function animate()
@@ -274,17 +266,8 @@
 				requestAnimationFrame(animate);
 				
 				//Renderizamos la escena
-				render();
-				//Actualizamos las estadisticas
-				stats.update();
-			}
-			
-			function render()
-			{
-				//Renderizamos la escena
 				renderer.render(scene, camera);
 			}
-			
 		</script>		
 	</body>	
 </html>

@@ -182,6 +182,8 @@ function LevelsModeView (sce, l, mats)
  * */
 function puzzleFinished()
 { 
+    
+    
     //Obtenemos el tiempo sobrante
     var time = cl.finish();
     //Indicamos que se ha terminado el puzzle
@@ -297,9 +299,19 @@ function puzzleFinished()
     }
     else
     {
+        finishedDialog.getElementsByTagName('p')[0].innerHTML = 'NIVEL SOLUCIONADO<br> en '+timeString;
         //Si ya esta creado el dialogo unicamente los mostramos
         finishedDialog.style.display = 'block';
     }
+    var text = "Enhorabuena!!! Puzzle solucionado ! en "+timeString;
+    //Si no tenemos creada una vista para las puntuaciones la creamos
+    if(sv == undefined)
+    {
+        sv = new ScoresView();
+        sv.hide();
+    }
+    //Mostramos el dialogo para guardar la puntuacion
+    sv.saveScoreDialog(text, time , 1, level);
 }
 
 /*

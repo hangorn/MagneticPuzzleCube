@@ -178,10 +178,10 @@ function finishAction(time, winner)
     if(type == 0 || type == 1)
     {
         sound.playFinal();
-        var cad = "Enhorabuena!!! Habeis solucionado el puzzle! en ";
+        var text = "Enhorabuena!!! Habeis solucionado el puzzle! en ";
         if(hour != 0)
-            cad+=hour+" horas, ";
-        cad+=min+" minutos y "+sec+" segundos";
+            text+=hour+" horas, ";
+        text+=min+" minutos y "+sec+" segundos";
     }
     //Si se trata del modo contrareloj
     if(type == 2 || type == 3)
@@ -190,22 +190,29 @@ function finishAction(time, winner)
         if(winner)
         {
             sound.playFinal();
-            var cad = "Enhorabuena!!! Has conseguido solucionar el puzzle antes que el otro jugagador! en ";
+            var text = "Enhorabuena!!! Has conseguido solucionar el puzzle antes que el otro jugagador! en ";
             if(hour != 0)
-                cad+=hour+" horas, ";
-            cad+=min+" minutos y "+sec+" segundos";
+                text+=hour+" horas, ";
+            text+=min+" minutos y "+sec+" segundos";
         }
         //Si no se ha ganado la partida
         else
         {
             sound.playExplosion();
-            var cad = "Lo sentimos. El otro jugador ha solucionado el puzzle antes en ";
+            var text = "Lo sentimos. El otro jugador ha solucionado el puzzle antes en ";
             if(hour != 0)
-                cad+=hour+" horas, ";
-            cad+=min+" minutos y "+sec+" segundos";
+                text+=hour+" horas, ";
+            text+=min+" minutos y "+sec+" segundos";
         }        
+    }    
+    //Si no tenemos creada una vista para las puntuaciones la creamos
+    if(sv == undefined)
+    {
+        sv = new ScoresView();
+        sv.hide();
     }
-    alert(cad);
+    //Mostramos el dialogo para guardar la puntuacion
+    sv.saveScoreDialog(text, time , 4, type);
 }
 
 /*

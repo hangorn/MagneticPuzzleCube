@@ -214,6 +214,9 @@ function onMenuMouseMove(event)
  * */
 function onMenuBack(event)
 {
+    //Si son las puntuaciones las ocultamos
+    if(currentMenu == 4)
+        sv.hide();
     //Si el menu en el que estamos tiene como anterior el menu principal
     if(currentMenu <= menuEntrys[0].length)
         mv.showMenu(0);

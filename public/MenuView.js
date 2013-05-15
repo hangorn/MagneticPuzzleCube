@@ -64,6 +64,7 @@ function MenuView (sce)
     
     //Botón de anterior
     var backButton;
+    
     //Formulario del modo clasico
     var classicForm;
     //Formulario del modo niveles
@@ -715,7 +716,7 @@ function createSurvivalModeForm()
     //Creamos una descripcion del modo de juego
     var descrip = document.createElement('p');
     //Añadimos el contenido    
-    descrip.innerHTML = 'Se debera resolver el mayor numero de puzzles posibles. Se dispone de un determinado tiempo en funcion de la dificultad para resolver cada puzzle. Cada vez que se resuelva un puzzle se añadira una cantidad de tiempo. Se pueden elegir las imagenes del puzzle haciendo click en \'personalizar imagenes\', se recomiendo elegir al menos 12 imagenes con 8 cubos y 18  con 27 cubos, para que no haya ninguna imagen repetida, si hay mas de estas se mostraran en los siguientes puzzles.';
+    descrip.innerHTML = 'Se debera resolver el mayor numero de puzzles posibles. Se dispone de un determinado tiempo en funcion de la dificultad para resolver cada puzzle. Cada vez que se resuelva un puzzle se añadira una cantidad de tiempo. Se pueden elegir las imagenes del puzzle haciendo click en \'personalizar imagenes\', se recomienda elegir al menos 12 imagenes con 8 cubos y 18  con 27 cubos, para que no haya ninguna imagen repetida, si hay mas de estas se mostraran en los siguientes puzzles.';
     //Añadimos la descripcion al contenedor
     form.appendChild(descrip);
     
@@ -1065,7 +1066,6 @@ function createFindServerForm()
     var gamesTable = document.createElement('table');
     gamesTable.border = "1";
     gamesTable.style.width = '100%';
-    //gamesTable.style.height = '100%';
     gamesTable.style.margin = '0';
     gamesCont.appendChild(gamesTable);
     //Creamos la cabecera para indicar el significado de cada campo de informacion de la partida
@@ -1123,7 +1123,7 @@ function createFindServerForm()
  * */
 function addGameEntry(name, ID, type)
 {
-    //Creamos la cabecera para indicar el significado de cada campo de informacion de la partida
+    //Creamos una fila para la entrada
     var row = document.createElement('tr');
     
     //Creamos una funcion para crear un dato de la entrada
@@ -1407,6 +1407,17 @@ this.showMenu = function (menuIndex)
             menC.enable(currentMenu);
         });
     }
+    //Si el menu seleccionado es el menu de puntuaciones
+    else if(currentMenu == 4)
+    {
+        if(sv == undefined)
+        {
+            sv = new ScoresView();
+            sv.showMode(0);
+        }
+        else
+            sv.show();
+    }
     //Si el menu seleccionado es el menu del modo clasico
     else if(currentMenu == 6)
     {
@@ -1434,6 +1445,7 @@ this.showMenu = function (menuIndex)
     //Si el menu seleccionado es el de crear partida multijugador
     else if(currentMenu == 10)
     {
+        //Si no tenemos conexion con el servidor la creamos
         if(socket == undefined)
             socket = new Socket();
         createServerForm.style.display = 'block';
@@ -1441,6 +1453,7 @@ this.showMenu = function (menuIndex)
     //Si el menu seleccionado es el de buscar partida multijugador
     else if(currentMenu == 11)
     {
+        //Si no tenemos conexion con el servidor la creamos
         if(socket == undefined)
             socket = new Socket();
         findServerForm.style.display = 'block';

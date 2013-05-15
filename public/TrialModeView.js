@@ -188,20 +188,29 @@ function TrialModeView (sce, numC, diff, mats)
  * */
 function puzzleFinished()
 { 
+    //Marcamos el flag de modo terminado
     finished = true;
-    //Obtenemos el tiempo sobrante
-    var time = cl.finish();
-    //Reproducimos el sonido de puzzle finalizado
+    //Reproducimos el sonido final
     sound.playFinal();
-    //Mostramos un mensaje
+    //Paramos el reloj y obtenemos el tiempo
+    var time = cl.finish();
+    //Obtenemos el mensaje que se mostrara
     var sec = time % 60;
     var min = Math.floor(time/60) % 60;
     var hour = Math.floor(time/3600);
-    var cad = "Enhorabuena!!! Puzzle solucionado !!! Te han sobrado ";
+    var text = "Enhorabuena!!! Puzzle solucionado !!! Te han sobrado ";
     if(hour != 0)
-        cad+=hour+" horas, ";
-    cad+=min+" minutos y "+sec+" segundos!!!";
-    alert(cad);
+        text+=hour+" horas, ";
+    text+=min+" minutos y "+sec+" segundos";
+    //Si no tenemos creada una vista para las puntuaciones la creamos
+    if(sv == undefined)
+    {
+        sv = new ScoresView();
+        sv.hide();
+    }
+    //Mostramos el dialogo para guardar la puntuacion
+    var submode = difficulty*2+(3-numberOfCubes);
+    sv.saveScoreDialog(text, time , 2, submode);
 }
 
 /*

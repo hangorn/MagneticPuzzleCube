@@ -34,9 +34,9 @@ function OptionsController (cont, opt, endAct)
  *****************************************/
 /*
  * Nombre: Constructor
- * Sinopsis: Constructor de la clase OptionsView.
+ * Sinopsis: Constructor de la clase OptionsController.
  * Entradas:
- *      -HTMLElement:cont-> contendor con todos los elementos de la vista.
+ *      -HTMLElement:cont -> contenedor con todos los elementos de la vista.
  *      -Optiones:opt -> objeto de la clase options donde se guardarán las opciones.
  *      -Callback:endAct -> función de rellamada que se ejecutará al
  *      terminar con las opciones tanto aceptar como cancelar, de

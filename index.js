@@ -128,20 +128,23 @@
 		{
 			if(verbose)
 				console.log('\t socket.io:: disconnected client ' + client.ID);
+			server.saveLastScore(client);
 			//Si el cliente esta en una partida y es el propietario de esta
             if(client.gameID)
 			{
                 server.finishGame(client, client.gameID);
             }
         });
-
-/********************************************************
- *  Registramos los eventos que recibiremos del cliente
- ********************************************************/
-
-        /*//Evento de mensaje recibido
-		socket.on('message', function(message)
+		
+		//Registramos el evento de enviar todos las puntuaciones del modo solicitado al cliente
+		socket.on('onGetScores', function(data)
 		{
-            server.onMessage(socket, message);
-        });*/
+			server.sendScores(client, data.mode, data.submode);
+		});
+		
+		//Registramos el evento guardar una puntuacion
+		socket.on('onSaveScore', function(data)
+		{
+			server.saveScore(client, data);
+		});
     });

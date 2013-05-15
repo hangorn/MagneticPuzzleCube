@@ -43,10 +43,14 @@ function Socket ()
     var onJointGame;
     //Función que será ejecutada cuando ambos jugadores esten lista para
     //empezar la partida, la guardamos para poder borrar su receptor de evento
-    var onAllReady;    
+    var onAllReady;
     //Función que será ejecutada cuando el otro jugador abandone la partida,
     //la guardamos para poder borrar su receptor de evento
     var onOtherPlayerLeft;
+    //Función que será ejecutada cuando se reciban las puntuaciones solicitadas,
+    //la guardamos para poder borrar su receptor de evento
+    var onSentScores
+    
 
 /*****************************************
  *  Constructor
@@ -436,6 +440,49 @@ this.placedPiece = function(ID, isPlaced, pos , rot)
     message += "#"+pos.x.toFixed(4)+"#"+pos.y.toFixed(4)+"#"+pos.z.toFixed(4);
     message += "#"+rot.x.toFixed(4)+"#"+rot.y.toFixed(4)+"#"+rot.z.toFixed(4);
     socket.send(message);
+}
+ 
+/*
+ * Nombre: getScores
+ * Sinopsis: Método para pedir al servidor las puntuaciones disponibles
+ *          de los modos indicados.
+ * Entradas:
+ *      -Integer:mode -> modo del que se quieren obtener las puntuaciones.
+ *      -Integer:submode -> submodo del que se quieren obtener las puntuaciones.
+ *      -Callback:callback -> funcion de rellamada que se ejecutará cuando se
+ *      reciban las puntuaciones.
+ * Salidas:
+ * */
+this.getScores = function(mode, submode, callback)
+{
+    //Le indicamos al servidor que deseamos obtener las puntuaciones disponibles
+    socket.emit('onGetScores', {mode:mode, submode:submode});
+    //Esperamos por la respuesta del servidor con los datos
+    socket.on("onSentScores", onSentScores = function(data)
+    {
+        //Ejecutamos la funcion de rellamada pasandole las puntuaciones
+        callback(data.scores);
+        //Borramos la recepcion del evento para que no se reciba mas de una vez
+        socket.removeListener('onSentScores', onSentScores);
+    });
+}
+ 
+/*
+ * Nombre: saveScore
+ * Sinopsis: Método para pedir al servidor que guarde la puntuacion suministrada con
+ *          los datos suministrados.
+ * Entradas:
+ *      -String:name -> nombre del jugador que ha conseguido la puntuación.
+ *      -Integer:score -> puntuación obtenida a guardar.
+ *      -Integer:mode -> modo en el que se ha conseguido la puntuación.
+ *      -Integer:submode -> submodo en el que se ha conseguido la puntuación.
+ * Salidas:
+ * */
+this.saveScore = function(name, score, mode, submode)
+{
+    var date = new Date();
+    //Le indicamos al servidor que deseamos guardar la puntuacion
+    socket.emit('onSaveScore', {name:name, score:score, date:date, mode:mode, submode:submode});
 }
 
 }

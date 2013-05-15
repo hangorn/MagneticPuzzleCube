@@ -272,10 +272,18 @@ function timeFinished()
  * */
 function finish(str)
 {
-    var cad = "";
-    cad += str;
-    cad += " Has conseguido solucionar "+solvedPuzzles+" puzzles. Enhorabuena!!!";
-    alert(cad);
+    var text = "";
+    text += str;
+    text += " Has conseguido solucionar "+solvedPuzzles+" puzzles. Enhorabuena!!!";
+    //Si no tenemos creada una vista para las puntuaciones la creamos
+    if(sv == undefined)
+    {
+        sv = new ScoresView();
+        sv.hide();
+    }
+    //Mostramos el dialogo para guardar la puntuacion
+    var submode = difficulty*2+(3-numberOfCubes);
+    sv.saveScoreDialog(text, solvedPuzzles , 3, submode);
 }
 
 

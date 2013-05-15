@@ -24,6 +24,8 @@ Server = function()
 	var UUID = require('node-uuid');
 	//Array con todos los jugos activos
 	var games = [];
+	//Objeto para el acceso a datos persistentes
+	var dao;
 
 
 /*****************************************
@@ -65,12 +67,13 @@ function solvedGame(game)
 	//Marcamos a los clientes como no preparados por si vuelven a jugar
 	game.players.client.ready = false;
 	game.players.host.ready = false;
-	//Borramos el estado de ganador a los clientes por si vuelven a jugar
-	game.players.client.winner = undefined;
-	game.players.host.winner = undefined;
 	//Desasociamos los jugadores con sus partidas
 	game.players.client.gameID = undefined;
 	game.players.host.gameID = undefined;
+	//Guardamos el ultimo jugador con el que ha jugado cada uno para
+	//luego guardar la puntuacion
+	game.players.client.lastPartner = game.players.host;
+	game.players.host.lastPartner = game.players.client;
 	//Borramos la partida
 	games.splice(i, 1);
 	console.log("game "+game.ID+" solved");
@@ -80,6 +83,47 @@ function solvedGame(game)
 /*****************************************
  *  Métodos Públicos
  *****************************************/
+
+/*
+ * Nombre: saveLastScore
+ * Sinopsis: Método para guardar una puntuación cuando empieze otra partida o se
+ * 			desconecte el cliente, si hay alguna puntuacion que guardar.
+ * Entradas:
+ *		-Client:client-> objeto de la clase cliente con los datos del cliente que
+ *		quiere desconectarse.
+ * Salidas:
+ * */
+this.saveLastScore = function(client)
+{
+	//Si el cliente que se va a desconectar tiene un ultimo jugador con el
+	//que ha jugado y este ultimo jugador quiere guardar la partida
+	if(client.lastPartner != undefined && client.lastPartner.savingScore)
+	{
+		//Si no tenemos un DAO
+		if(dao == undefined)
+			dao = require('./DataAccessObject.js');
+		//Guardamos la puntuacion con el nombre anonimo
+		var score = client.lastPartner.score;
+		//Si se trata del modo contrareloj
+		if(score.submode == 2 || score.submode == 3)
+		{
+			//Si el cliente que quiere guardar la puntuacion es el ganador lo
+			//ponemos primero, si no ponemos primero al otro jugador
+			if(client.winner)
+				score.name = 'Anonimo#'+client.lastPartner.score.name;
+			else
+				score.name = client.lastPartner.score.name+'#Anonimo';
+		}
+		//Si se trata del modo cooperativo
+		else
+			score.name = client.lastPartner.score.name+'#Anonimo';
+		//Guardamos la puntuacion en la bb dd
+		dao.saveScore(score);
+		//Marcamos a ambos jugadores como que no quieren guardar la puntuacion
+		client.savingScore = false;
+		client.lastPartner.savingScore = false;
+	}
+}
  
 /*
  * Nombre: createGame
@@ -118,7 +162,7 @@ this.createGame = function(client, name, type, images, iniPos, iniRot)
 
 /*
  * Nombre: sendGames
- * Sinopsis: Método para enviar al cliente las información de todas las partidas disponibles.
+ * Sinopsis: Método para enviar al cliente la información de todas las partidas disponibles.
  * Entradas:
  *		-Client:client-> objeto de la clase cliente con los datos del cliente que
  *		quiere recibir las partidas disponibles.
@@ -203,6 +247,9 @@ this.readyToPlay = function(client)
 		//Indicamos a ambos jugadores que los dos estan listos para empezar la partida
 		client.socket.emit('onAllReady', {});
 		game.players.client.socket.emit('onAllReady', {});
+		//Miramos a ver si alguno de los dos jugadores tiene alguna puntuacion pendiente de guardar
+		this.saveLastScore(game.players.client);
+		this.saveLastScore(game.players.host);
 		//Iniciamos la partida
 		game.core = require("./MultiplayerServer.js");
 		game.core.startGame(game, function(){solvedGame(game)});
@@ -213,6 +260,9 @@ this.readyToPlay = function(client)
 		//Indicamos a ambos jugadores que los dos estan listos para empezar la partida
 		client.socket.emit('onAllReady', {});
 		game.players.host.socket.emit('onAllReady', {});
+		//Miramos a ver si alguno de los dos jugadores tiene alguna puntuacion pendiente de guardar
+		this.saveLastScore(game.players.client);
+		this.saveLastScore(game.players.host);
 		//Iniciamos la partida 
 		game.core = require("./MultiplayerServer.js");
 		game.core.startGame(game, function(){solvedGame(game)});
@@ -269,6 +319,82 @@ this.finishGame = function(client, gameID)
 	client.gameID = undefined;
 	//La borramos
 	games.splice(i, 1);
+}
+
+/*
+ * Nombre: sendScores
+ * Sinopsis: Método para enviar al cliente la información de las puntuaciones del modo solicitado.
+ * Entradas:
+ *		-Client:client-> objeto de la clase cliente con los datos del cliente que
+ *		quiere recibir las puntuaciones.
+ *      -Integer:mode -> modo del que se quieren obtener las puntuaciones.
+ *      -Integer:submode -> submodo del que se quieren obtener las puntuaciones.
+ * Salidas:
+ * */
+this.sendScores = function(client, mode, submode)
+{
+	//Si no tenemos un DAO
+	if(dao == undefined)
+		dao = require('./DataAccessObject.js');
+	//Obtenemos las puntuaciones solicitadas
+	dao.getScores(mode, submode, function(scores)
+	{
+		//Enviamos la respuesta con los datos al cliente
+		client.socket.emit("onSentScores", {scores:scores});
+	});
+}
+
+/*
+ * Nombre: saveScore
+ * Sinopsis: Método para guardar una puntuación.
+ * Entradas:
+ *		-Client:client-> objeto de la clase cliente con los datos del cliente que
+ *		quiere guardar una puntuación.
+ *      -Data:data-> objeto que contendrá los datos de la puntuación
+ *		a guardar : nombre, puntuación, fecha, modo y submodo.
+ * Salidas:
+ * */
+this.saveScore = function(client, data)
+{
+	//Si no tenemos un DAO
+	if(dao == undefined)
+		dao = require('./DataAccessObject.js');
+	//Si no se trata de un modo multijugador
+	if(data.mode != 4)
+		//Unicamente guardamos las puntuaciones
+		dao.saveScore(data);
+	//Si es un modo multijugador
+	else
+	{
+		//Indicamos que quiere guardar una puntuacion
+		client.savingScore = true;
+		//Guardamos la puntuacion que quiere guardar el cliente
+		client.score = data;
+		//Si el ultimo compañero con el que se jugo ya quiere guardar la puntuacion
+		if(client.lastPartner != undefined && client.lastPartner.savingScore == true)
+		{
+			var score = client.score;
+			//Guardamos los nombres de los jugadores
+			//Si se trata del modo contrareloj
+			if(score.submode == 2 || score.submode == 3)
+			{
+				//Si el cliente que quiere guardar la puntuacion es el ganador lo
+				//ponemos primero, si no ponemos primero al otro jugador
+				if(client.winner)
+					score.name = client.score.name+'#'+client.lastPartner.score.name;
+				else
+					score.name = client.lastPartner.score.name+'#'+client.score.name;
+			}
+			//Si se trata del modo cooperativo
+			else
+				score.name = client.score.name+'#'+client.lastPartner.score.name;
+			//Guardamos la puntuacion en la bb dd
+			dao.saveScore(score);
+			//Marcamos a ambos jugadores como que no quieren guardar la puntuacion
+			client.savingScore = false;
+			client.lastPartner.savingScore = false;
+		}
+	}
 }
 
 }

@@ -212,3 +212,20 @@ function randomColor()
     
     return rand;
 }
+
+/*
+ * Nombre: spanishDate
+ * Sinopsis: Función que transforma un objeto de la clase Date en una cadena
+ *          con la fecha en español.
+ * Entradas:
+ *      -Date:d -> objeto de la clase Date con los datos de la fecha que se
+ *      transformará.
+ * Salidas:
+ *      -String -> cadena de caracteres con la fecha en español.
+ * */
+function spanishDate(d)
+{
+    var weekday=["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"];
+    var monthname=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    return weekday[d.getDay()]+" "+d.getDate()+" de "+monthname[d.getMonth()]+" de "+d.getFullYear()+" a las "+(d.getHours()<10?"0":"")+d.getHours()+":"+(d.getMinutes()<10?"0":"")+d.getMinutes();
+}

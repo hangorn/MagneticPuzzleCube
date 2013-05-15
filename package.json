@@ -1,13 +1,20 @@
 {
-	"name": "Magnetic Puzzle Cube",
-	"author" : "Javier Vaquero Marcos",
-	"description": "puzzle 3D game where each piece is a cube, with the cubes you can shape a big cube.developed using WebGL, with his framework Three.js",
-	"version": "0.0.1",
+	"name": "magnetic_puzzle_cube",
+	"author": "Javier Vaquero Marcos",
+	"engines": {
+		"node": "0.8.x"
+	},
+	"description": "puzzle 3D game where each piece is a cube, with the cubes you can shape a big cube. developed using WebGL, with his framework Three.js",
+	"version": "0.0.1-2",
 	"private": false,
-	"dependencies":
-	{
+	"dependencies": {
 		"express": "3.2.0",
 		"socket.io": "0.9.x",
-		"node-uuid": "1.4.0"
+		"node-uuid": "1.4.0",
+		"mongodb": "1.3.3"
+	},
+	"subdomain": "magneticube",
+	"scripts": {
+		"start": "node index.js"
 	}
 }

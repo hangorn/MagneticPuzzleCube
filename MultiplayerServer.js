@@ -262,13 +262,16 @@ this.startGame = function(g, solAct)
     //Si es el tipo de partida contrareloj
     if(game.type == 2 || game.type == 3)
     {
+        //Indicamos que ninguno de los dos ha ganado la partida todavia
+        game.players.host.winner = undefined;
+        game.players.host.winner = undefined;
         //Creamos un puzzle para el host de la partida
         game.players.host.puzzle = require("./ServerPuzzle.js");
         game.players.host.puzzle.createPuzzle((game.type % 2)+2);
         //Creamos un puzzle para el cliente de la partida
         game.players.client.puzzle = require("./ServerPuzzle.js");
         game.players.client.puzzle.createPuzzle((game.type % 2)+2);
-        //Iniciamos la posicones y rotaciones iniciales de los cubos de ambos puzzles
+        //Iniciamos las posicones y rotaciones iniciales de los cubos de ambos puzzles
         for(var i=0; i<Math.pow((game.type % 2)+2, 3); i++)
         {
             game.players.host.puzzle.setPosition(i+1, game.iniPos.x, game.iniPos.y, game.iniPos.z);
