@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: Socket.js
  *  Sinopsis: Clase que manejará la comunicación con el servidor
  *  en el modo multijugador mediante sockets.
@@ -28,6 +35,8 @@ function Socket ()
     var ID;
     //ID unico que suministra el servidor para la partida
     var gameID;
+    //Acción que se ejecutará cuando se abandone.
+    var leftAct;
     
     //Función que será ejecutada cuando se cree una partida,
     //la guardamos para poder borrar su receptor de evento
@@ -47,9 +56,9 @@ function Socket ()
     //Función que será ejecutada cuando el otro jugador abandone la partida,
     //la guardamos para poder borrar su receptor de evento
     var onOtherPlayerLeft;
-    //Función que será ejecutada cuando se reciban las puntuaciones solicitadas,
-    //la guardamos para poder borrar su receptor de evento
-    var onSentScores
+    //Array con las funciones que serán ejecutadas cuando se reciban las puntuaciones
+    //solicitadas, las guardamos para poder borrar su receptor de evento
+    var onSentScores = [];
     
 
 /*****************************************
@@ -67,15 +76,33 @@ function Socket ()
 
     //No nos consideramos conectados hasta que no obtenemos nuestro ID
     socket.on('connect', function()
-    {        
-    }.bind(this));
+    {
+        console.log("connect");
+    });
     socket.on('onconnected', function(data)
     {
         ID = data.id;
         connected = true;
         console.log("conected with server with ID: "+ID);
-    }.bind(this));
-    
+    });
+    //Si se desconecta
+    socket.on('disconnect', function()
+    {
+        console.log("disconnect");
+        //Y estabamos en un juego
+        if(gameID)
+        {
+            //Si tenemos una accion de abandono para ejecutar la ejecutamos
+            if(leftAct)
+                leftAct();
+            //Borramos la recepcion del evento para que no se reciba mas de una vez
+            socket.removeListener('onOtherPlayerLeft', onOtherPlayerLeft);
+            //Borramos la recepcion del evento para que no se reciba y no duplicarlo
+            socket.removeListener('message', onServerUpdate);
+            //Borramos la recepcion del evento para que no se reciba y no duplicarlo
+            socket.removeListener('onSolvedGame', onSolvedGame);
+        }
+    });
     
  /*****************************************
  *  Métodos Privados
@@ -152,6 +179,23 @@ function onSolvedGame(data)
     socket.removeListener('onOtherPlayerLeft', onOtherPlayerLeft);
     //Borramos el ID de la partida en la que estabamos
     gameID = undefined;
+    leftAct = undefined;
+}
+
+/*
+ * Nombre: removeHandlers
+ * Sinopsis: Método para borrar todos los manejadores asociados a un evento.
+ * Entradas:
+ *      -String:event -> cadena de caracteres con el nombre del evento.
+ *      -Handlers[]:hands -> array con todos los manejadores del evento.
+ * Salidas:
+ * */
+function removeHandlers(event, hands)
+{
+    while(hands.length > 0)
+    {
+        socket.removeListener(event, hands.pop());
+    }
 }
 
 
@@ -174,17 +218,21 @@ function onSolvedGame(data)
  *      se conenecte otro jugador a la partida.
  *      -Callback:leftAction -> función de rellamada que se ejecutará si el otro jugador
  *      abandona la partida.
+ *      -Callback:leftAction -> función de rellamada que se ejecutará cuando se haya
+ *      creado la partida en el servidor.
  * Salidas:
  * */
-this.createdGame = function(name, type, images, iniPos, iniRot, callback, leftAction)
+this.createdGame = function(name, type, images, iniPos, iniRot, callback, leftAction, createdAction)
 {
+    //Guardamos la accion para cuando se abandone.
+    leftAct = leftAction;
     //Le indicamos al servidor que deseamos crear una partida
     socket.emit('onCreateGame', {name : name, type : type, images:images, iniPos : iniPos, iniRot : iniRot});
-    
     //Registramos el evento para cuando se conecte otro jugador
     socket.on('onCreatedGame', onCreatedGame=function(data)
     {
         gameID = data.gameID;
+        createdAction();
         //Borramos la recepcion del evento para que no se reciba mas de una vez
         socket.removeListener('onCreatedGame', onCreatedGame);
     });
@@ -201,6 +249,7 @@ this.createdGame = function(name, type, images, iniPos, iniRot, callback, leftAc
     socket.on('onOtherPlayerLeft', onOtherPlayerLeft=function(data)
     {
         leftAction();
+        leftAct = undefined;
         //Borramos la recepcion del evento para que no se reciba mas de una vez
         socket.removeListener('onOtherPlayerLeft', onOtherPlayerLeft);
         //Borramos la recepcion del evento para que no se reciba y no duplicarlo
@@ -244,6 +293,9 @@ this.getGames = function()
  * */
 this.joinGame = function(gID, cbJoint, cbNoJoint, leftAction)
 {
+    //Guardamos la accion para cuando se abandone.
+    leftAct = leftAction;
+    
     //Le indicamos al servidor que deseamos unirnos a la partida que le indicamos
     socket.emit('onJoinGame', {gameID : gID});
     
@@ -272,6 +324,7 @@ this.joinGame = function(gID, cbJoint, cbNoJoint, leftAction)
     socket.on('onOtherPlayerLeft', onOtherPlayerLeft=function(data)
     {
         leftAction();
+        leftAct = undefined;
         //Borramos la recepcion del evento para que no se reciba mas de una vez
         socket.removeListener('onOtherPlayerLeft', onOtherPlayerLeft);
         //Borramos la recepcion del evento para que no se reciba y no duplicarlo
@@ -458,13 +511,13 @@ this.getScores = function(mode, submode, callback)
     //Le indicamos al servidor que deseamos obtener las puntuaciones disponibles
     socket.emit('onGetScores', {mode:mode, submode:submode});
     //Esperamos por la respuesta del servidor con los datos
-    socket.on("onSentScores", onSentScores = function(data)
+    socket.on("onSentScores", onSentScores[onSentScores.push( function(data)
     {
         //Ejecutamos la funcion de rellamada pasandole las puntuaciones
         callback(data.scores);
         //Borramos la recepcion del evento para que no se reciba mas de una vez
-        socket.removeListener('onSentScores', onSentScores);
-    });
+        removeHandlers('onSentScores', onSentScores);
+    })-1]);
 }
  
 /*

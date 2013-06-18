@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: Utils.js
  *  Sinopsis: Fichero con funciones auxiliares.
  *
@@ -132,11 +139,20 @@ function imageToBase64(image)
 {
     //Creamos un canvas
     var canvas = document.createElement("canvas");
-    canvas.width = image.width;
-    canvas.height = image.height;
+    //Si la imagen es demasido grande la reducimos
+    if(image.height > 256)
+    {
+        canvas.width = 256*image.width/image.height;
+        canvas.height = 256;
+    }
+    else
+    {
+        canvas.width = image.width;
+        canvas.height = image.height;
+    }
     //Introducimos la imagen en el canvas
     var ctx = canvas.getContext("2d");
-    ctx.drawImage(image, 0, 0);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
     //Obtenemos la imagen codificada
     var dataURL = canvas.toDataURL("image/png");
     //Suministramos solo los datos, no la cabecera

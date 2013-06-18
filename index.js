@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: index.js
  *  Sinopsis: archivo que se ejecutará en el servidor utilizando node.js, y con su framework Express.
  *  Se encarga de poner a punto el servidor y activar los sockets.
@@ -13,7 +20,7 @@
  *  Creamos tanto  el servidor  como los sockets
  ************************************************/
 
-	var gameport = 8080;
+	var gameport;
 	var verbose = true;
 	
 	var UUID = require('node-uuid');
@@ -30,6 +37,12 @@
  *  Ponemos en marcha el servidor
  ************************************************/
 
+	//Comprobamos si estamos utilizando nodejitsu
+    if(process.env.SUBDOMAIN == 'magneticube')
+        gameport = 80;
+    else
+    	gameport = 8080;
+	
 	//Hacemos que el servidor escuche en el puerto indicado
 	server.listen(gameport);
 	console.log('\t :: Express :: Listening on port ' + gameport);
@@ -44,8 +57,6 @@
 	{
 		//Obtenemos el fichero que se ha pedido
 		var file = req.params[0];
-		//if(verbose)
-		//	console.log('\t :: Express :: file requested : ' + file);
 		//Enviamos el fichero solicitado
 		res.sendfile( __dirname + '/public/' + file );
 	});

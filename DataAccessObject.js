@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: DataAccessObject.js
  *  Sinopsis: clase que proveerá la información consistente a sus clientes,
  *          utilizando el patrón DAO.
@@ -25,6 +32,9 @@ DataAccessObject = function()
     //Base de datos que se utilizará con MongoDB
     var database;
     
+    //Flag para saber si hay que utilizar la base de datos de Nodejitsu
+    var isJitsu = false;
+    
     var orderModes = [1,1,-1,-1,1];
     var modes = [0,1,2,3,4];
     var submodes = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
@@ -40,13 +50,19 @@ DataAccessObject = function()
  * Salidas:
  * */
 
+    //Comprobamos si estamos utilizando nodejitsu
+    if(process.env.SUBDOMAIN == 'magneticube')
+        isJitsu = true;
+        
     //Obtenemos el modulo de mongodb
     var mongodb = require("mongodb");
     //Nos conectamos a la base de datos
-    var mongoserver = new mongodb.Server('localhost', mongodb.Connection.DEFAULT_PORT, {auto_reconnect: true});
+    if(isJitsu)
+        var mongoserver = new mongodb.Server('ds059887.mongolab.com', 59887, {auto_reconnect: true});
+    else
+        var mongoserver = new mongodb.Server('localhost', mongodb.Connection.DEFAULT_PORT, {auto_reconnect: true});
     //Creamos un cliente para conectarnos a la base de datos
     mongoClient = new mongodb.MongoClient(mongoserver);
-    
     
 
 /*****************************************
@@ -89,10 +105,9 @@ function getCollection(name, callback)
  * */
 this.getScores = function(mo, sub, callback)
 {
-    //Nos conectamos con el cliente y obtenemos la base de datos
-    mongoClient.open(function(err, mc)
+    //Si la base de datos ya esta abierta
+    if(database)
     {
-        database = mc.db('magPCdb');
         //Obtenemos la coleccion (tabla) de las puntuaciones
         getCollection('scores', function(collection)
         {
@@ -102,10 +117,49 @@ this.getScores = function(mo, sub, callback)
                 if(error) console.log("db.collection.find::error");
                 callback(array);
                 console.log("Served "+array.length+" elements for mode "+mo+"  "+sub);
-                mongoClient.close();
             });
         });
-    });
+    }
+    //Si no hay conexion con al base de datos
+    else
+    {
+        //Nos conectamos con el cliente y obtenemos la base de datos
+        mongoClient.open(function(err, mc)
+        {
+            if(isJitsu)
+                database = mc.db('nodejitsu_hangorn_nodejitsudb5787118691');
+            else
+                database = mc.db('magPCdb');
+                
+            if(isJitsu)
+                database.authenticate('nodejitsu_hangorn', 'a9e8o67if2ho1srfh5omvl7797', function (err, replies)
+                {
+                    //Obtenemos la coleccion (tabla) de las puntuaciones
+                    getCollection('scores', function(collection)
+                    {
+                        //Buscamos las puntuaciones del modo y submodo solicitado
+                        collection.find({mode: modes[mo], submode: submodes[sub]}, {sort:[['score',orderModes[mo]],['date', -1]]}).toArray(function(error, array)
+                        {
+                            if(error) console.log("db.collection.find::error");
+                            callback(array);
+                            console.log("Served "+array.length+" elements for mode "+mo+"  "+sub);
+                        });
+                    });
+                });
+            else
+                //Obtenemos la coleccion (tabla) de las puntuaciones
+                getCollection('scores', function(collection)
+                {
+                    //Buscamos las puntuaciones del modo y submodo solicitado
+                    collection.find({mode: modes[mo], submode: submodes[sub]}, {sort:[['score',orderModes[mo]],['date', -1]]}).toArray(function(error, array)
+                    {
+                        if(error) console.log("db.collection.find::error");
+                        callback(array);
+                        console.log("Served "+array.length+" elements for mode "+mo+"  "+sub);
+                    });
+                });            
+        });
+    }
 }
  
 /*
@@ -119,10 +173,9 @@ this.getScores = function(mo, sub, callback)
  * */
 this.saveScore = function(data)
 {
-    //Nos conectamos con el cliente y obtenemos la base de datos
-    mongoClient.open(function(err, mc)
+    //Si la base de datos ya esta abierta
+    if(database)
     {
-        database = mc.db('magPCdb');
         //Obtenemos la coleccion (tabla) de las puntuaciones
         getCollection('scores', function(collection)
         {
@@ -131,11 +184,50 @@ this.saveScore = function(data)
             {
                 if(error) console.log("cant save score");
                 else console.log("score saved by "+data.name+" with "+data.score+"    ");
-                mongoClient.close();
                 console.log(data);
             });
         });
-    });
+    }
+    //Si no hay conexion con al base de datos
+    else
+    {
+        //Nos conectamos con el cliente y obtenemos la base de datos
+        mongoClient.open(function(err, mc)
+        {
+            if(isJitsu)
+                database = mc.db('nodejitsu_hangorn_nodejitsudb5787118691');
+            else
+                database = mc.db('magPCdb');
+                
+            if(isJitsu)
+                database.authenticate('nodejitsu_hangorn', 'a9e8o67if2ho1srfh5omvl7797', function (err, replies)
+                {
+                    //Obtenemos la coleccion (tabla) de las puntuaciones
+                    getCollection('scores', function(collection)
+                    {
+                        //Insertamos el documento (puntuacion) en la coleccion (tabla)
+                        collection.insert([{name:data.name, score:data.score, date:data.date, mode:data.mode, submode:data.submode}], function(error, result)
+                        {
+                            if(error) console.log("cant save score");
+                            else console.log("score saved by "+data.name+" with "+data.score+"    ");
+                            console.log(data);
+                        });
+                    });
+                });
+            else
+                //Obtenemos la coleccion (tabla) de las puntuaciones
+                getCollection('scores', function(collection)
+                {
+                    //Insertamos el documento (puntuacion) en la coleccion (tabla)
+                    collection.insert([{name:data.name, score:data.score, date:data.date, mode:data.mode, submode:data.submode}], function(error, result)
+                    {
+                        if(error) console.log("cant save score");
+                        else console.log("score saved by "+data.name+" with "+data.score+"    ");
+                        console.log(data);
+                    });
+                });
+        });
+    }
 }
 
 }

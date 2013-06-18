@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: MultiplayerServer.js
  *  Sinopsis: clase que se ejecutará en la parte del servidor, se encargará de
  *  toda la lógica de la partida multijugador.
@@ -12,7 +19,7 @@
  *  CLASE MULTIPLAYERSERVER
  *  */
 
-MultiplayerServer = function()
+function MultiplayerServer()
 {
     
 
@@ -319,8 +326,13 @@ this.finishGame = function()
     game.players.client.socket.removeListener('onSolvedGame', onClientSolvedGame);
 }
 
+this.getID = function()
+{
+    return game.ID;
+}
+
 }
 
 //Exportamos la clase para que pueda ser usada exteriormente en
 //el lado del servidor
-module.exports = new MultiplayerServer();
+module.exports = MultiplayerServer;

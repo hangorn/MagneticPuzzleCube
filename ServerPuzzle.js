@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: ServerPuzzle.js
  *  Sinopsis: Clase del lado del servidor que se encargará de la lógica del puzzle.
  *  
@@ -151,9 +158,12 @@ this.removeCube = function (ID)
  * */
 this.setPosition = function (ID, posx, posy, posz)
 {
-    cubes[ID-1].position.x = posx;
-    cubes[ID-1].position.y = posy;
-    cubes[ID-1].position.z = posz;
+    if(ID > 0)
+    {
+        cubes[ID-1].position.x = posx;
+        cubes[ID-1].position.y = posy;
+        cubes[ID-1].position.z = posz;
+    }
 }
 
 
@@ -166,7 +176,8 @@ this.setPosition = function (ID, posx, posy, posz)
  * */
 this.getPosition = function (ID)
 {
-    return cubes[ID-1].position;
+    if(ID > 0)
+        return cubes[ID-1].position;
 }
 
 /*

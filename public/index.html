@@ -1,3 +1,5 @@
+<!--Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>-->
+<!--See the file license.txt for copying permission.-->
 <!doctype html>
 <html lang="en">
 	<head>
@@ -32,50 +34,52 @@
 		
 		<script src="Utils.js"></script>
 		
-		<script src="PuzzleView.js"></script>
-		<script src="PuzzleController.js"></script>
-		<script src="Puzzle.js"></script>
-		<script src="Cube.js"></script>
-		<script src="Face.js"></script>
+		<script src="Puzzle/PuzzleView.js"></script>
+		<script src="Puzzle/PuzzleController.js"></script>
+		<script src="Puzzle/Puzzle.js"></script>
+		<script src="Puzzle/Cube.js"></script>
+		<script src="Puzzle/Face.js"></script>
 		
-		<script src="ColoredPuzzleView.js"></script>
-		<script src="TooManyPiecesPuzzle.js"></script>
-		<script src="TooManyPiecesPuzzleView.js"></script>
-		<script src="MovingPuzzleController.js"></script>
-		<script src="MovingPuzzleView.js"></script>
+		<script src="Puzzle/ColoredPuzzleView.js"></script>
+		<script src="Puzzle/TooManyPiecesPuzzle.js"></script>
+		<script src="Puzzle/TooManyPiecesPuzzleView.js"></script>
+		<script src="Puzzle/MovingPuzzleController.js"></script>
+		<script src="Puzzle/MovingPuzzleView.js"></script>
 		
-		<script src="ClassicModeView.js"></script>
-		<script src="ClassicModeController.js"></script>
+		<script src="GameModes/ClassicModeView.js"></script>
+		<script src="GameModes/ClassicModeController.js"></script>
 		
-		<script src="LevelsModeView.js"></script>
-		<script src="LevelsModeController.js"></script>
+		<script src="GameModes/LevelsModeView.js"></script>
+		<script src="GameModes/LevelsModeController.js"></script>
 		
-		<script src="TrialModeView.js"></script>
-		<script src="TrialModeController.js"></script>
+		<script src="GameModes/TrialModeView.js"></script>
+		<script src="GameModes/TrialModeController.js"></script>
 		
-		<script src="SurvivalModeView.js"></script>
-		<script src="SurvivalModeController.js"></script>
+		<script src="GameModes/SurvivalModeView.js"></script>
+		<script src="GameModes/SurvivalModeController.js"></script>
 		
-		<script src="MultiplayerPuzzleView.js"></script>
-		<script src="MultiplayerPuzzleController.js"></script>
-		<script src="MultiplayerPuzzle.js"></script>
-		<script src="MultiplayerModeView.js"></script>
-		<script src="MultiplayerModeController.js"></script>
+		<script src="Puzzle/MultiplayerPuzzleView.js"></script>
+		<script src="Puzzle/MultiplayerPuzzleController.js"></script>
+		<script src="Puzzle/MultiplayerPuzzle.js"></script>
+		<script src="GameModes/MultiplayerModeView.js"></script>
+		<script src="GameModes/MultiplayerModeController.js"></script>
 		
-		<script src="LibraryView.js"></script>
-		<script src="LibraryController.js"></script>
+		<script src="Menu/LibraryView.js"></script>
+		<script src="Menu/LibraryController.js"></script>
 		
-		<script src="MenuView.js"></script>
-		<script src="MenuController.js"></script>
+		<script src="Menu/MenuView.js"></script>
+		<script src="Menu/MenuController.js"></script>
 		
-		<script src="OptionsView.js"></script>
-		<script src="OptionsController.js"></script>
-		<script src="Options.js"></script>
+		<script src="Menu/OptionsView.js"></script>
+		<script src="Menu/OptionsController.js"></script>
+		<script src="Menu/Options.js"></script>
 		
-		<script src="ScoresView.js"></script>
-		<script src="ScoresController.js"></script>
+		<script src="Menu/ScoresView.js"></script>
+		<script src="Menu/ScoresController.js"></script>
 		
-		<script src="Clock.js"></script>
+		<script src="Menu/HelpView.js"></script>
+		
+		<script src="GameModes/Clock.js"></script>
 		<script src="Sound.js"></script>
 		
 		<script src="socket/socket.io.js"></script> <!--http://socket.io/#how-to-use-->
@@ -85,7 +89,25 @@
 			//Comprobamos que WebGL esta disponible
 			if ( ! Detector.webgl )
 			{
-				Detector.addGetWebGLMessage();
+				var element = document.createElement( 'div' );
+				element.id = 'webgl-error-message';
+				element.style.fontFamily = 'monospace';
+				element.style.fontSize = '13px';
+				element.style.fontWeight = 'normal';
+				element.style.textAlign = 'center';
+				element.style.background = '#fff';
+				element.style.color = '#000';
+				element.style.padding = '1.5em';
+				//element.style.width = '400px';
+				element.style.margin = '5em auto 0';
+		
+				element.innerHTML = '<p>Parece que todavia no soporta <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">WebGL</a>.</p>';
+				element.innerHTML += '<p>Si esta utilizando un navegador no compatible con WebGL como Internet Explorer, por favor utilice un navegador compatible con WebGL, como <a href="http://www.mozilla.org/es-ES/firefox" style="color:#000">Mozilla Firefox</a> o <a href="http://www.google.com/chrome?hl=es" style="color:#000">Google Chrome</a>.</p>';
+				element.innerHTML += '<p>Si esta utilizando Firefox, no tiene activado WebGL. Para activarlo siga estos sencillos pasos:</p><ul style="text-align:left"><li>Primero para entrar en la configuración avanzada de Firefox escribimos en la barra de direcciones la siguiente dirección “about:config”.</li><li>Ingresamos en la configuración.</li><li>Buscamos en el campo de búsqueda la palabra “webgl”.</li><li>Cambiamos la propiedad “webgl.force-enabled” al valor “true” haciendo doble click en dicha propiedad.</li><li>Cerramos la pestaña o ventana, ya está activado WebGL.</li></ul>';
+				element.innerHTML += '<p>Si esta utilizando Chrome, no tiene activado WebGL. Para activarlo siga estos sencillos pasos:</p><ul style="text-align:left"><li>Primero para entrar en las opciones avanzadas de Chrome escribimos en la barra de direcciones la siguiente dirección “about:flags”.</li><li>Desplácese hacia abajo y busque "Composición acelerada por GPU" y habilitela.</li><li>Más abajo se encuentra la opcion "Habilitar WebGL", que también deberá habilitar.</li><li>Por último, pulse el botón Reiniciar en la parte inferior de la página.</li></ul>';
+				
+				document.body.appendChild(element);
+				
 				var WebGLavaible = false
 			}
 			else
@@ -161,6 +183,7 @@
 			var mmv; //Modo multijugador
 			var ov; //Opciones
 			var sv; //Puntuaciones
+			var hv; //Ayuda
 			
 			//Objeto que administrara el sonido
 			var sound;			
@@ -170,6 +193,17 @@
 			//Tamaño de la ventana
 			var windowHeight;
 			var windowWidth;
+			
+			var opForm = document.createElement('div');
+			opForm.innerHTML = '2013 © <a href="https://twitter.com/javi6d6">Javier Vaquero</a><br>Codigo en <a href="https://github.com/hangorn/MagneticPuzzleCube">GitHub</a>';
+			opForm.style.position = 'absolute';
+			opForm.style.bottom = '0';
+			opForm.style.right = '0';
+			opForm.style.fontFamily = 'monospace';
+			opForm.style.fontSize = '12px';
+			opForm.style.fontWeight = 'normal';
+			opForm.style.textAlign = 'right';
+			document.body.appendChild(opForm);
 			
 			//Si webGL esta disponible
 			if(WebGLavaible)
@@ -184,6 +218,9 @@
  ************************************************/
 			function init()
 			{
+				//Iniciamos el sonido
+				sound = new Sound();
+				
 				document.body.style.background = '#'+backgroundColor.toString(16);
 				windowHeight = window.innerHeight;
 				windowWidth = window.innerWidth;
@@ -229,6 +266,8 @@
 								//Activamos el flag
 								levelsLoad = true;
 								mv = new MenuView(scene);
+								//Creamos las opciones
+								ov = new OptionsView();
 						} }
 						//Enviamos la peticion del fichero
 						requestLevels.send();
@@ -253,11 +292,6 @@
 					//Cambiamos el tamaño del render
 					renderer.setSize(windowWidth, windowHeight);					
 				}
-				
-				//Iniciamos el sonido
-				sound = new Sound();
-				//Creamos las opciones
-				ov = new OptionsView();
 			}			
 			
 			function animate()

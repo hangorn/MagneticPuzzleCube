@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: Sound.js
  *  Sinopsis: Clase que manejará los sonidos de la aplicación.
  *  
@@ -23,7 +30,7 @@ function Sound ()
  *****************************************/
 
     //Flag para saber si el sonido esta activado
-    var enabled = false;
+    var enabled = true;
     //Flag para saber si esta activado el sonido de ayuda al colocar una pieza
     var helpSoundEnabled = false;
     //Canales para sonido

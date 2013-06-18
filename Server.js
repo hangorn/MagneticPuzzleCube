@@ -1,4 +1,11 @@
 /*
+ *  Copyright (c) 2013 Javier Vaquero <javi_salamanca@hotmail.com>
+ *
+ *  See the file license.txt for copying permission.
+ *
+ */
+
+/*
  *  Nombre: Server.js
  *  Sinopsis: clase que se ejecutará en la parte del servidor, se encargará de
  *  toda la lógica del servidor: gestionar partidas, gestionar jugadores, ...
@@ -251,7 +258,7 @@ this.readyToPlay = function(client)
 		this.saveLastScore(game.players.client);
 		this.saveLastScore(game.players.host);
 		//Iniciamos la partida
-		game.core = require("./MultiplayerServer.js");
+		game.core = new (require("./MultiplayerServer.js"))();
 		game.core.startGame(game, function(){solvedGame(game)});
 	}
 	//Si el cliente es el cliente de la partida y el host de la partida ya esta listo
@@ -263,8 +270,8 @@ this.readyToPlay = function(client)
 		//Miramos a ver si alguno de los dos jugadores tiene alguna puntuacion pendiente de guardar
 		this.saveLastScore(game.players.client);
 		this.saveLastScore(game.players.host);
-		//Iniciamos la partida 
-		game.core = require("./MultiplayerServer.js");
+		//Iniciamos la partida
+		game.core = new (require("./MultiplayerServer.js"))();
 		game.core.startGame(game, function(){solvedGame(game)});
 	}
 }
